@@ -1,0 +1,2914 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>JS Recon - Bug Hunter Edition</title>
+
+    <!-- Social Share Meta Tags (Open Graph & Twitter) -->
+    <meta property="og:title" content="JS Recon - Bug Hunter Edition">
+    <meta property="og:description"
+        content="A powerful, client-side only JavaScript enumerator and beautifier custom-built for bug bounty hunters and penetration testers.">
+    <meta property="og:image" content="https://iha089.github.io/js-recon/banner.png">
+    <meta property="og:url" content="https://iha089.github.io/js-recon/">
+    <meta property="og:type" content="website">
+
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="JS Recon - Bug Hunter Edition">
+    <meta name="twitter:description"
+        content="A powerful, client-side only JavaScript enumerator and beautifier custom-built for bug bounty hunters and penetration testers.">
+    <meta name="twitter:image" content="https://raw.githubusercontent.com/IHA089/js-recon/refs/heads/main/recon.png">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🕵️</text></svg>">
+    
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;700;900&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+    <style>
+
+        :root {
+            --bg-color: #060608;
+            --bg-secondary: #0a0a0f;
+            --text-color: #e8ddd5;
+            --text-dim: #6b5a52;
+            --primary: #e5001a;
+            --primary-glow: rgba(229, 0, 26, 0.4);
+            --primary-dim: rgba(229, 0, 26, 0.12);
+            --primary-bright: #ff1a35;
+            --btn-bg: #8b0010;
+            --btn-hover: #c0001a;
+            --border-color: #2a1015;
+            --border-hot: rgba(229, 0, 26, 0.35);
+            --input-bg: #040406;
+            --accent-orange: #ff4500;
+            --accent-amber: #ff8c00;
+        }
+
+        * { box-sizing: border-box; }
+
+        body {
+            background: var(--bg-color);
+            color: var(--text-color);
+            font-family: 'Share Tech Mono', 'Consolas', monospace;
+            padding: 16px;
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            height: 100vh;
+            overflow: hidden;
+            position: relative;
+        }
+
+        /* Animated scanlines */
+        body::before {
+            content: '';
+            position: fixed;
+            inset: 0;
+            background: repeating-linear-gradient(
+                0deg,
+                transparent,
+                transparent 2px,
+                rgba(0,0,0,0.18) 2px,
+                rgba(0,0,0,0.18) 4px
+            );
+            pointer-events: none;
+            z-index: 9998;
+            animation: scanMove 12s linear infinite;
+        }
+
+        @keyframes scanMove {
+            0% { background-position: 0 0; }
+            100% { background-position: 0 100vh; }
+        }
+
+        /* Ambient red glow in corners */
+        body::after {
+            content: '';
+            position: fixed;
+            inset: 0;
+            background:
+                radial-gradient(ellipse 60% 40% at 0% 0%, rgba(229,0,26,0.08) 0%, transparent 60%),
+                radial-gradient(ellipse 50% 30% at 100% 100%, rgba(229,0,26,0.06) 0%, transparent 60%);
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        h2 {
+            font-family: 'Orbitron', monospace;
+            color: var(--primary);
+            margin-bottom: 14px;
+            margin-top: 4px;
+            font-weight: 900;
+            font-size: 20px;
+            letter-spacing: 3px;
+            text-transform: uppercase;
+            text-shadow:
+                0 0 10px var(--primary-glow),
+                0 0 30px rgba(229,0,26,0.25),
+                0 0 60px rgba(229,0,26,0.1);
+            position: relative;
+            animation: titlePulse 3s ease-in-out infinite;
+        }
+
+        .created-by {
+            margin: -6px 0 14px;
+            font-family: 'Share Tech Mono', monospace;
+            font-size: 11px;
+            letter-spacing: 3px;
+            text-transform: uppercase;
+            color: var(--text-dim);
+            text-align: center;
+            position: relative;
+            z-index: 1;
+        }
+        .created-by a {
+            color: var(--primary);
+            text-decoration: none;
+            font-family: 'Orbitron', monospace;
+            font-weight: 700;
+            letter-spacing: 3px;
+            text-shadow: 0 0 8px var(--primary-glow);
+            transition: text-shadow .2s, color .2s;
+        }
+        .created-by a:hover { color: #fff; text-shadow: 0 0 14px var(--primary), 0 0 28px var(--primary-glow); }
+
+        @keyframes titlePulse {
+            0%, 100% { text-shadow: 0 0 10px var(--primary-glow), 0 0 30px rgba(229,0,26,0.25), 0 0 60px rgba(229,0,26,0.1); }
+            50% { text-shadow: 0 0 20px var(--primary-glow), 0 0 50px rgba(229,0,26,0.4), 0 0 80px rgba(229,0,26,0.15); }
+        }
+
+        .controls {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 14px;
+            width: 100%;
+            justify-content: center;
+            align-items: center;
+            flex-wrap: wrap;
+            background: rgba(229, 0, 26, 0.03);
+            padding: 10px 14px;
+            border-radius: 4px;
+            border: 1px solid var(--border-hot);
+            box-shadow: 0 0 20px rgba(229,0,26,0.06), inset 0 1px 0 rgba(229,0,26,0.08);
+            position: relative;
+        }
+
+        /* Animated top border on controls */
+        .controls::before {
+            content: '';
+            position: absolute;
+            top: -1px; left: 10%; right: 10%;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, var(--primary), transparent);
+            animation: borderSweep 3s ease-in-out infinite;
+        }
+
+        @keyframes borderSweep {
+            0%, 100% { left: 10%; right: 10%; opacity: 0.6; }
+            50% { left: 2%; right: 2%; opacity: 1; }
+        }
+
+        input[type="text"] {
+            padding: 9px 14px;
+            border: 1px solid var(--border-hot);
+            border-radius: 3px;
+            background: var(--input-bg);
+            color: var(--text-color);
+            flex: 1;
+            min-width: 250px;
+            font-family: 'Share Tech Mono', monospace;
+            font-size: 13px;
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+
+        input[type="text"]:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 12px var(--primary-glow), inset 0 0 6px rgba(229,0,26,0.06);
+        }
+
+        input[type="file"] {
+            max-width: 220px;
+            color: var(--text-dim);
+            cursor: pointer;
+        }
+
+        input[type="file"]::file-selector-button {
+            padding: 7px 12px;
+            border-radius: 3px;
+            border: 1px solid var(--border-hot);
+            background: rgba(229, 0, 26, 0.08);
+            color: var(--text-color);
+            cursor: pointer;
+            margin-right: 10px;
+            font-family: 'Share Tech Mono', monospace;
+            font-size: 12px;
+            transition: all 0.2s;
+        }
+
+        input[type="file"]::file-selector-button:hover {
+            background: rgba(229, 0, 26, 0.18);
+            box-shadow: 0 0 8px var(--primary-glow);
+        }
+
+        button {
+            padding: 9px 18px;
+            background: var(--btn-bg);
+            border: 1px solid rgba(229, 0, 26, 0.5);
+            border-radius: 3px;
+            color: var(--text-color);
+            font-weight: 600;
+            font-family: 'Orbitron', monospace;
+            font-size: 11px;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        button::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(135deg, rgba(255,255,255,0.04) 0%, transparent 60%);
+            pointer-events: none;
+        }
+
+        button:hover {
+            background: var(--btn-hover);
+            border-color: var(--primary);
+            box-shadow: 0 0 16px var(--primary-glow), 0 0 4px rgba(229,0,26,0.5);
+            transform: translateY(-1px);
+        }
+
+        button:active {
+            transform: translateY(0);
+            box-shadow: 0 0 8px var(--primary-glow);
+        }
+
+        .divider {
+            color: var(--text-dim);
+            font-size: 12px;
+            letter-spacing: 2px;
+            margin: 0 4px;
+        }
+
+        .main-wrapper {
+            width: 100%;
+            flex: 1;
+            display: flex;
+            gap: 12px;
+            overflow: hidden;
+            max-width: 1600px;
+            position: relative;
+            z-index: 1;
+        }
+
+        .editor-container {
+            flex: 3;
+            border: 1px solid var(--border-hot);
+            border-radius: 4px;
+            overflow: hidden;
+            box-shadow: 0 0 30px rgba(229,0,26,0.08), 0 8px 24px rgba(0,0,0,0.6);
+            display: flex;
+            flex-direction: column;
+            min-width: 0;
+            position: relative;
+        }
+
+        /* Animated corner accents */
+        .editor-container::before,
+        .editor-container::after {
+            content: '';
+            position: absolute;
+            width: 16px; height: 16px;
+            z-index: 10;
+            pointer-events: none;
+        }
+        .editor-container::before {
+            top: 0; left: 0;
+            border-top: 2px solid var(--primary);
+            border-left: 2px solid var(--primary);
+            box-shadow: -2px -2px 8px var(--primary-glow);
+        }
+        .editor-container::after {
+            bottom: 0; right: 0;
+            border-bottom: 2px solid var(--primary);
+            border-right: 2px solid var(--primary);
+            box-shadow: 2px 2px 8px var(--primary-glow);
+        }
+
+        .sidebar {
+            flex: 1;
+            min-width: 300px;
+            max-width: 400px;
+            background: rgba(4, 2, 4, 0.92);
+            border: 1px solid var(--border-hot);
+            border-radius: 4px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 0 24px rgba(229,0,26,0.07), 0 4px 12px rgba(0,0,0,0.5);
+            position: relative;
+        }
+
+        .sidebar::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, var(--primary), transparent);
+            animation: sidebarTop 4s ease-in-out infinite 1.5s;
+        }
+
+        @keyframes sidebarTop {
+            0%, 100% { opacity: 0.4; }
+            50% { opacity: 1; }
+        }
+
+        .sidebar-header {
+            padding: 11px 14px;
+            background: rgba(229, 0, 26, 0.05);
+            border-bottom: 1px solid var(--border-hot);
+            font-weight: 700;
+            font-family: 'Orbitron', monospace;
+            font-size: 11px;
+            letter-spacing: 2px;
+            color: var(--primary);
+            text-shadow: 0 0 8px var(--primary-glow);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            text-transform: uppercase;
+        }
+
+        .enum-section {
+            margin: 12px 10px;
+            background: rgba(229, 0, 26, 0.02);
+            border-radius: 3px;
+            border: 1px solid rgba(229, 0, 26, 0.1);
+            overflow: hidden;
+            transition: border-color 0.2s;
+        }
+
+        .enum-section:hover {
+            border-color: rgba(229, 0, 26, 0.25);
+        }
+
+        .enum-title {
+            padding: 7px 10px;
+            font-size: 10px;
+            text-transform: uppercase;
+            font-weight: 700;
+            font-family: 'Orbitron', monospace;
+            letter-spacing: 1px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .enum-title .badge {
+            background: rgba(0, 0, 0, 0.4);
+            border: 1px solid rgba(255,255,255,0.08);
+            padding: 1px 6px;
+            border-radius: 2px;
+            font-size: 10px;
+            font-family: 'Share Tech Mono', monospace;
+        }
+
+        /* Category themes — all remapped to red/amber/ember palette */
+        .theme-domains {
+            border-bottom: 2px solid var(--primary);
+            background: rgba(229, 0, 26, 0.1);
+            color: #ff4d5e;
+        }
+
+        .theme-urls {
+            border-bottom: 2px solid #ff6b1a;
+            background: rgba(255, 107, 26, 0.08);
+            color: #ff8c4a;
+        }
+
+        .theme-apis {
+            border-bottom: 2px solid #ff8c00;
+            background: rgba(255, 140, 0, 0.08);
+            color: #ffaa33;
+        }
+
+        .theme-clouds {
+            border-bottom: 2px solid #cc2200;
+            background: rgba(204, 34, 0, 0.1);
+            color: #ff5533;
+        }
+
+        .theme-secrets {
+            border-bottom: 2px solid #ff0022;
+            background: rgba(255, 0, 34, 0.12);
+            color: #ff3355;
+            text-shadow: 0 0 6px rgba(255,0,34,0.4);
+        }
+
+        .theme-headers {
+            border-bottom: 2px solid #cc1100;
+            background: rgba(204, 17, 0, 0.1);
+            color: #ff4422;
+        }
+
+        .theme-ips {
+            border-bottom: 2px solid #991100;
+            background: rgba(153, 17, 0, 0.1);
+            color: #dd3311;
+        }
+
+        .theme-graphql {
+            border-bottom: 2px solid #ff2244;
+            background: rgba(255, 34, 68, 0.1);
+            color: #ff5577;
+        }
+
+        .theme-hidden {
+            border-bottom: 2px solid #442222;
+            background: rgba(68, 34, 34, 0.12);
+            color: #886666;
+        }
+
+        .theme-admin {
+            border-bottom: 2px solid #ff0000;
+            background: rgba(255, 0, 0, 0.12);
+            color: #ff4444;
+            text-shadow: 0 0 5px rgba(255,0,0,0.3);
+        }
+
+        .theme-debug {
+            border-bottom: 2px solid #773333;
+            background: rgba(119, 51, 51, 0.1);
+            color: #aa6655;
+        }
+
+        .theme-network {
+            border-bottom: 2px solid #bb1100;
+            background: rgba(187, 17, 0, 0.08);
+            color: #ee3322;
+        }
+
+        .theme-integrations {
+            border-bottom: 2px solid #dd2200;
+            background: rgba(221, 34, 0, 0.1);
+            color: #ff5533;
+        }
+
+        .theme-configs {
+            border-bottom: 2px solid #ff5500;
+            background: rgba(255, 85, 0, 0.08);
+            color: #ff7733;
+        }
+
+        /* --- Settings Panel --- */
+        .settings-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(2, 0, 3, 0.88);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            z-index: 9999;
+            align-items: center;
+            justify-content: center;
+        }
+        .settings-overlay.open { display: flex; }
+
+        .settings-panel {
+            background: linear-gradient(160deg, #0f0508 0%, #0a0204 60%, #0d0306 100%);
+            border: 1px solid rgba(229, 0, 26, 0.45);
+            border-radius: 8px;
+            width: 580px;
+            max-width: 95vw;
+            max-height: 90vh;
+            overflow-y: auto;
+            box-shadow: 0 0 0 1px rgba(229,0,26,0.08), 0 0 60px rgba(229,0,26,0.15), 0 24px 64px rgba(0,0,0,0.9);
+            animation: panelIn 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+            position: relative;
+        }
+        .settings-panel::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0;
+            height: 1px;
+            background: linear-gradient(90deg, transparent 5%, rgba(229,0,26,0.7) 30%, rgba(255,80,80,0.9) 50%, rgba(229,0,26,0.7) 70%, transparent 95%);
+        }
+        @keyframes panelIn {
+            from { opacity: 0; transform: scale(0.95) translateY(12px); }
+            to { opacity: 1; transform: scale(1) translateY(0); }
+        }
+
+        .settings-header {
+            padding: 18px 22px 16px;
+            border-bottom: 1px solid rgba(229,0,26,0.15);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: rgba(229,0,26,0.04);
+        }
+        .settings-header-left { display: flex; align-items: center; gap: 14px; }
+        .settings-icon-wrap {
+            width: 36px; height: 36px;
+            background: rgba(229,0,26,0.12);
+            border: 1px solid rgba(229,0,26,0.3);
+            border-radius: 6px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 16px; flex-shrink: 0;
+        }
+        .settings-header h3 {
+            margin: 0 0 2px;
+            font-size: 13px; font-weight: 700;
+            font-family: 'Orbitron', monospace;
+            color: var(--text-color);
+            letter-spacing: 2px; text-transform: uppercase;
+        }
+        .settings-subtitle {
+            font-size: 10px; color: var(--text-dim);
+            letter-spacing: 0.8px;
+            font-family: 'Share Tech Mono', monospace;
+        }
+        .settings-close {
+            background: rgba(229,0,26,0.06);
+            border: 1px solid rgba(229,0,26,0.2);
+            color: var(--text-dim); cursor: pointer;
+            padding: 6px 11px; border-radius: 4px;
+            font-size: 14px; line-height: 1;
+            font-family: monospace; transition: all 0.18s; flex-shrink: 0;
+        }
+        .settings-close:hover {
+            color: var(--primary); border-color: var(--primary);
+            box-shadow: 0 0 10px var(--primary-glow);
+            background: rgba(229,0,26,0.1); transform: none;
+        }
+        .settings-body { padding: 22px; }
+        .settings-section-label {
+            font-size: 9px; font-weight: 700;
+            font-family: 'Orbitron', monospace;
+            color: var(--text-dim); text-transform: uppercase;
+            letter-spacing: 2px; margin-bottom: 10px;
+            display: flex; align-items: center; gap: 8px;
+        }
+        .settings-section-dot {
+            display: inline-block; width: 4px; height: 4px;
+            background: var(--primary); border-radius: 50%;
+            box-shadow: 0 0 6px var(--primary-glow); flex-shrink: 0;
+        }
+        .settings-field { margin-bottom: 6px; }
+        .settings-key-input-wrap {
+            display: flex; align-items: center;
+            background: var(--input-bg);
+            border: 1px solid rgba(229,0,26,0.28);
+            border-radius: 5px; overflow: hidden;
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+        .settings-key-input-wrap:focus-within {
+            border-color: var(--primary);
+            box-shadow: 0 0 14px rgba(229,0,26,0.2), inset 0 0 8px rgba(229,0,26,0.04);
+        }
+        .settings-key-input-wrap input {
+            flex: 1; padding: 11px 14px;
+            background: transparent; border: none;
+            color: var(--text-color);
+            font-family: 'Share Tech Mono', monospace;
+            font-size: 13px; outline: none; letter-spacing: 0.5px;
+        }
+        .settings-key-input-wrap input::placeholder { color: var(--text-dim); letter-spacing: 2px; }
+        .key-toggle-btn {
+            background: none; border: none;
+            border-left: 1px solid rgba(229,0,26,0.15);
+            color: var(--text-dim); cursor: pointer;
+            padding: 0 14px; height: 42px;
+            display: flex; align-items: center;
+            transition: color 0.18s;
+            transform: none !important; box-shadow: none !important;
+        }
+        .key-toggle-btn:hover { color: var(--primary); background: rgba(229,0,26,0.06); }
+        .key-saved {
+            display: none; align-items: center; gap: 10px; flex-wrap: wrap;
+            background: var(--input-bg); border: 1px solid rgba(53,208,127,0.35);
+            border-radius: 5px; padding: 9px 12px;
+            box-shadow: 0 0 14px rgba(53,208,127,0.07);
+        }
+        .key-saved-badge {
+            font-family: 'Orbitron', monospace; font-size: 9px; font-weight: 700; letter-spacing: 1.5px;
+            color: #04170d; background: #35d07f; padding: 3px 8px; border-radius: 999px; white-space: nowrap;
+        }
+        .key-saved-mask {
+            flex: 1; min-width: 120px; font-family: 'Share Tech Mono', monospace; font-size: 13px;
+            color: var(--text-color); letter-spacing: 1px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+        }
+        .key-act-btn {
+            background: rgba(229,0,26,0.08); border: 1px solid rgba(229,0,26,0.35); color: var(--text-color);
+            font-family: 'Share Tech Mono', monospace; font-size: 11px; padding: 6px 12px; border-radius: 3px;
+            cursor: pointer; letter-spacing: .5px; transform: none !important; box-shadow: none !important;
+        }
+        .key-act-btn:hover { background: rgba(229,0,26,0.22); color: #fff; border-color: var(--primary); }
+        .key-act-btn.danger { border-color: rgba(255,255,255,0.15); color: var(--text-dim); }
+        .key-act-btn.danger:hover { color: #ff6b7d; border-color: #ff6b7d; background: rgba(255,45,74,0.1); }
+        .key-cancel { display: none; margin-top: 7px; }
+        .settings-key-input-wrap textarea {
+            flex: 1; padding: 10px 14px; background: transparent; border: none; outline: none; resize: vertical;
+            color: var(--text-color); font-family: 'Share Tech Mono', monospace; font-size: 11px; line-height: 1.6; white-space: pre; overflow-x: auto;
+        }
+        .settings-select {
+            width: 100%; padding: 10px 12px; background: var(--input-bg); color: var(--text-color);
+            border: 1px solid rgba(229,0,26,0.28); border-radius: 5px; outline: none;
+            font-family: 'Share Tech Mono', monospace; font-size: 12px; min-width: 0;
+        }
+        .settings-select:focus { border-color: var(--primary); }
+        .proxy-help { margin-top: 10px; }
+        .proxy-help summary { cursor: pointer; font-size: 11px; color: var(--primary); font-family: 'Share Tech Mono', monospace; }
+        .proxy-help summary:hover { text-decoration: underline; }
+        .proxy-snippet {
+            margin: 8px 0; padding: 10px 12px; background: #05050a; border: 1px solid rgba(229,0,26,0.2);
+            border-left: 3px solid var(--primary); border-radius: 4px; overflow-x: auto;
+            font-family: 'Share Tech Mono', monospace; font-size: 11px; line-height: 1.5; color: #8ff0c8; white-space: pre;
+        }
+        .settings-hint {
+            font-size: 11px; color: var(--text-dim);
+            margin-top: 7px; line-height: 1.6;
+            font-family: 'Share Tech Mono', monospace;
+        }
+        .settings-hint a { color: var(--primary); text-decoration: none; }
+        .settings-hint a:hover { text-decoration: underline; }
+        .settings-hint code {
+            background: rgba(229,0,26,0.08);
+            border: 1px solid rgba(229,0,26,0.15);
+            border-radius: 3px; padding: 1px 5px;
+            font-family: 'Share Tech Mono', monospace;
+            font-size: 10px; color: #cc8888;
+        }
+
+        /* Model grid */
+        .model-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 7px;
+        }
+        .model-card {
+            background: rgba(229,0,26,0.03);
+            border: 1px solid rgba(229,0,26,0.13);
+            border-radius: 5px; padding: 10px 12px;
+            cursor: pointer; transition: all 0.15s;
+            position: relative; overflow: hidden;
+        }
+        .model-card:hover {
+            background: rgba(229,0,26,0.07);
+            border-color: rgba(229,0,26,0.35);
+        }
+        .model-card.selected {
+            background: rgba(229,0,26,0.1);
+            border-color: var(--primary);
+            box-shadow: 0 0 12px rgba(229,0,26,0.15), inset 0 0 8px rgba(229,0,26,0.05);
+        }
+        .model-card.selected::before {
+            content: '';
+            position: absolute; top: 0; left: 0; right: 0;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, var(--primary), transparent);
+        }
+        .model-card-name {
+            font-size: 11.5px; font-weight: 600;
+            font-family: 'Share Tech Mono', monospace;
+            color: var(--text-color); margin-bottom: 3px;
+            display: flex; align-items: center;
+            justify-content: space-between; gap: 4px;
+            padding-right: 18px;
+        }
+        .model-badge-free {
+            font-size: 8px; font-family: 'Orbitron', monospace;
+            font-weight: 700; letter-spacing: 0.5px;
+            color: #3fb950; background: rgba(63,185,80,0.1);
+            border: 1px solid rgba(63,185,80,0.25);
+            padding: 1px 5px; border-radius: 2px; white-space: nowrap;
+        }
+        .model-badge-paid {
+            font-size: 8px; font-family: 'Orbitron', monospace;
+            font-weight: 700; letter-spacing: 0.5px;
+            color: #ff8c00; background: rgba(255,140,0,0.1);
+            border: 1px solid rgba(255,140,0,0.2);
+            padding: 1px 5px; border-radius: 2px; white-space: nowrap;
+        }
+        .model-card-provider {
+            font-size: 10px; color: var(--text-dim);
+            font-family: 'Share Tech Mono', monospace;
+        }
+        .model-card-check {
+            position: absolute; top: 8px; right: 8px;
+            width: 16px; height: 16px;
+            background: var(--primary); border-radius: 50%;
+            display: none; align-items: center; justify-content: center;
+        }
+        .model-card.selected .model-card-check { display: flex; }
+        .model-card-check svg { width: 9px; height: 9px; stroke: white; }
+
+        /* Model picker toolbar / scroll area */
+        .model-toolbar { display: flex; gap: 6px; margin-bottom: 8px; align-items: center; }
+        .model-toolbar input.model-search {
+            flex: 1; min-width: 0; width: 100%;
+            padding: 8px 11px; font-size: 12px;
+        }
+        .model-chip {
+            padding: 7px 10px; font-size: 9px; letter-spacing: 1px;
+            font-family: 'Orbitron', monospace; font-weight: 700;
+            background: rgba(229,0,26,0.05); color: var(--text-dim);
+            border: 1px solid rgba(229,0,26,0.2); border-radius: 3px;
+            cursor: pointer; text-transform: uppercase; transform: none !important;
+            box-shadow: none !important;
+        }
+        .model-chip:hover { color: var(--text-color); background: rgba(229,0,26,0.1); }
+        .model-chip.active { color: var(--primary); border-color: var(--primary); background: rgba(229,0,26,0.14); }
+        .model-scroll {
+            max-height: 300px; overflow-y: auto; padding-right: 4px;
+            scrollbar-width: thin; scrollbar-color: rgba(229,0,26,0.4) transparent;
+        }
+        .model-load-status {
+            display: flex; align-items: center; justify-content: space-between; gap: 8px;
+            font-size: 10px; color: var(--text-dim); margin-top: 8px;
+            font-family: 'Share Tech Mono', monospace;
+        }
+        .model-load-status.warn { color: var(--accent-amber); }
+        .model-refresh-btn {
+            background: none; border: 1px solid rgba(229,0,26,0.25); color: var(--primary);
+            font-size: 10px; padding: 3px 9px; border-radius: 3px; cursor: pointer;
+            font-family: 'Share Tech Mono', monospace; transform: none !important; box-shadow: none !important;
+        }
+        .model-refresh-btn:hover { background: rgba(229,0,26,0.12); }
+        .model-empty { grid-column: 1 / -1; text-align: center; padding: 18px; color: var(--text-dim); font-size: 12px; }
+        .model-card-id {
+            font-size: 9px; color: var(--text-dim); opacity: 0.7; margin-top: 2px;
+            font-family: 'Share Tech Mono', monospace; word-break: break-all;
+        }
+        .fallback-row {
+            display: flex; align-items: center; gap: 8px; margin-top: 12px;
+            font-size: 11px; color: var(--text-dim); cursor: pointer;
+            font-family: 'Share Tech Mono', monospace;
+        }
+        .fallback-row input { accent-color: var(--primary); cursor: pointer; }
+        .ai-served-by {
+            margin-top: 12px; padding-top: 8px; border-top: 1px dashed rgba(229,0,26,0.2);
+            font-size: 10px; color: var(--text-dim); font-family: 'Share Tech Mono', monospace;
+        }
+        .ai-err-hint { margin-top: 8px; font-size: 11px; color: var(--text-dim); }
+        .ai-err-hint a { color: var(--primary); }
+
+        .settings-actions {
+            display: flex; align-items: center;
+            justify-content: space-between;
+            margin-top: 20px; padding-top: 16px;
+            border-top: 1px solid rgba(229,0,26,0.1);
+        }
+        .settings-status {
+            font-size: 11px; font-family: 'Share Tech Mono', monospace;
+            color: #3fb950; display: flex; align-items: center;
+            gap: 6px; min-height: 20px;
+        }
+        .settings-save {
+            padding: 10px 22px;
+            background: rgba(229,0,26,0.15);
+            border: 1px solid rgba(229,0,26,0.5);
+            border-radius: 4px; color: var(--primary);
+            font-weight: 700; font-family: 'Orbitron', monospace;
+            font-size: 11px; letter-spacing: 1.5px; text-transform: uppercase;
+            cursor: pointer; transition: all 0.2s;
+            display: flex; align-items: center; gap: 7px;
+        }
+        .settings-save:hover {
+            background: rgba(229,0,26,0.28);
+            box-shadow: 0 0 20px rgba(229,0,26,0.25);
+            color: #fff; transform: none;
+        }
+
+
+        /* rendered response inside the small sidebar box */
+        .ai-response-box.md { white-space: normal; font-family: 'Segoe UI', Roboto, system-ui, sans-serif; font-size: 12px; padding: 12px; }
+        .ai-response-wrap { flex: 1; display: flex; flex-direction: column; min-height: 140px; gap: 6px; }
+        .ai-response-wrap .ai-response-box { flex: 1; }
+        .ai-tools { display: none; align-items: center; gap: 6px; }
+        .ai-tools.show { display: flex; }
+        .ai-tools .ai-tools-title { flex: 1; font-size: 9px; font-family: 'Orbitron', monospace; letter-spacing: 1.5px; color: var(--text-dim); text-transform: uppercase;
+            white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .ai-tool-btn { background: rgba(229,0,26,0.08); border: 1px solid rgba(229,0,26,0.35); color: var(--text-color);
+            font-size: 10px; padding: 5px 10px; border-radius: 3px; cursor: pointer; letter-spacing: .5px;
+            font-family: 'Share Tech Mono', monospace; transform: none !important; box-shadow: none !important; }
+        .ai-tool-btn:hover { background: rgba(229,0,26,0.22); color: #fff; border-color: var(--primary); }
+        .ai-tool-btn.primary { border-color: var(--primary); color: var(--primary); font-weight: 700; }
+
+        /* fullscreen report viewer */
+        .ai-fs-overlay { display: none; position: fixed; inset: 0; z-index: 10000; flex-direction: column;
+            background: radial-gradient(ellipse at top left, #1a0710 0%, #07060c 55%, #05070d 100%); }
+        .ai-fs-overlay.open { display: flex; animation: fsIn .18s ease-out; }
+        @keyframes fsIn { from { opacity: 0; transform: scale(.985); } to { opacity: 1; transform: none; } }
+        .ai-fs-bar { display: flex; align-items: center; gap: 10px; padding: 12px 20px; border-bottom: 1px solid rgba(229,0,26,.35);
+            background: rgba(229,0,26,.06); flex-shrink: 0; flex-wrap: wrap; }
+        .ai-fs-bar .ttl { flex: 1; min-width: 160px; font-family: 'Orbitron', monospace; font-size: 13px; font-weight: 700; letter-spacing: 2px;
+            color: var(--primary); text-transform: uppercase; text-shadow: 0 0 12px var(--primary-glow); }
+        .ai-fs-bar .sub { font-size: 10px; color: var(--text-dim); font-family: 'Share Tech Mono', monospace; display: block; letter-spacing: .5px; text-transform: none; text-shadow: none; margin-top: 3px; font-weight: 400; }
+        .ai-fs-scroll { flex: 1; overflow-y: auto; padding: 28px 20px 60px; }
+        .ai-fs-scroll .md-report { max-width: 1180px; margin: 0 auto; font-size: 15px; }
+        .ai-fs-scroll .md-report td, .ai-fs-scroll .md-report th { padding: 12px 14px; }
+
+        /* --- Tab System --- */
+        .sidebar-tabs {
+            display: flex;
+            border-bottom: 1px solid var(--border-hot);
+            background: rgba(229, 0, 26, 0.03);
+        }
+
+        .sidebar-tab {
+            flex: 1;
+            padding: 10px 0;
+            font-size: 10px;
+            font-weight: 700;
+            font-family: 'Orbitron', monospace;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            text-align: center;
+            cursor: pointer;
+            color: var(--text-dim);
+            border-bottom: 2px solid transparent;
+            transition: color 0.2s, border-color 0.2s, text-shadow 0.2s;
+            user-select: none;
+        }
+
+        .sidebar-tab:hover {
+            color: var(--text-color);
+        }
+
+        .sidebar-tab.active {
+            color: var(--primary);
+            border-bottom-color: var(--primary);
+            text-shadow: 0 0 8px var(--primary-glow);
+        }
+
+        .tab-pane {
+            display: none;
+            flex: 1;
+            overflow-y: auto;
+            flex-direction: column;
+        }
+
+        .tab-pane.active {
+            display: flex;
+        }
+
+        /* --- AI Analysis Tab --- */
+        .ai-panel {
+            padding: 12px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            height: 100%;
+            box-sizing: border-box;
+        }
+
+        .ai-model-label {
+            font-size: 9px;
+            font-weight: 700;
+            font-family: 'Orbitron', monospace;
+            color: var(--text-dim);
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+        }
+
+        .ai-no-key {
+            padding: 24px 16px;
+            text-align: center;
+            color: var(--text-dim);
+            font-size: 13px;
+            line-height: 1.6;
+        }
+
+        .ai-no-key span {
+            color: var(--primary);
+            cursor: pointer;
+            text-decoration: underline;
+        }
+
+        .ai-prompt-select {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .ai-prompt-btn {
+            background: rgba(229, 0, 26, 0.04);
+            border: 1px solid rgba(229, 0, 26, 0.18);
+            border-radius: 3px;
+            color: var(--text-color);
+            padding: 9px 11px;
+            font-size: 12px;
+            cursor: pointer;
+            text-align: left;
+            transition: all 0.18s;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-family: 'Share Tech Mono', monospace;
+        }
+
+        .ai-prompt-btn:hover {
+            background: rgba(229, 0, 26, 0.1);
+            border-color: rgba(229, 0, 26, 0.45);
+            box-shadow: 0 0 10px rgba(229, 0, 26, 0.1);
+            transform: none;
+        }
+
+        .ai-prompt-btn .prompt-icon { font-size: 14px; flex-shrink: 0; }
+        .ai-prompt-btn .prompt-text { flex: 1; }
+        .ai-prompt-btn .prompt-title {
+            font-weight: 600;
+            margin-bottom: 2px;
+            color: var(--text-color);
+            font-family: 'Share Tech Mono', monospace;
+        }
+        .ai-prompt-btn .prompt-desc {
+            color: var(--text-dim);
+            font-size: 10px;
+        }
+
+        .ai-custom-input {
+            display: flex;
+            gap: 6px;
+        }
+
+        .ai-custom-input input {
+            flex: 1;
+            padding: 8px 10px;
+            background: var(--input-bg);
+            border: 1px solid var(--border-hot);
+            border-radius: 3px;
+            color: var(--text-color);
+            font-size: 12px;
+            font-family: 'Share Tech Mono', monospace;
+        }
+
+        .ai-custom-input input:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 10px var(--primary-glow);
+        }
+
+        .ai-send-btn {
+            padding: 8px 13px;
+            background: rgba(229, 0, 26, 0.14);
+            border: 1px solid rgba(229, 0, 26, 0.4);
+            border-radius: 3px;
+            color: var(--primary);
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 700;
+            transition: all 0.18s;
+        }
+
+        .ai-send-btn:hover {
+            background: rgba(229, 0, 26, 0.28);
+            box-shadow: 0 0 12px var(--primary-glow);
+            transform: none;
+        }
+
+        .ai-response-box {
+            flex: 1;
+            min-height: 140px;
+            background: rgba(2, 0, 4, 0.8);
+            border: 1px solid rgba(229, 0, 26, 0.18);
+            border-radius: 3px;
+            padding: 12px;
+            font-size: 12px;
+            line-height: 1.65;
+            color: var(--text-color);
+            overflow-y: auto;
+            white-space: pre-wrap;
+            word-break: break-word;
+            font-family: 'Share Tech Mono', monospace;
+        }
+
+        .ai-response-box.loading {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            color: var(--text-dim);
+        }
+
+        .ai-response-box.empty {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--text-dim);
+            font-size: 11px;
+        }
+
+        .ai-spinner {
+            width: 14px;
+            height: 14px;
+            border: 2px solid rgba(229, 0, 26, 0.2);
+            border-top-color: var(--primary);
+            border-radius: 50%;
+            animation: spin 0.7s linear infinite;
+            flex-shrink: 0;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .ai-divider {
+            height: 1px;
+            background: var(--border-hot);
+            margin: 2px 0;
+        }
+
+        .ai-model-badge {
+            font-size: 10px;
+            color: var(--text-dim);
+            text-align: right;
+            font-family: 'Share Tech Mono', monospace;
+        }
+
+        .ai-model-badge strong {
+            color: var(--primary);
+        }
+
+        /* Active model bar in AI panel */
+        .ai-active-model {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            background: rgba(229,0,26,0.05);
+            border: 1px solid rgba(229,0,26,0.2);
+            border-radius: 5px;
+            padding: 9px 12px;
+        }
+
+        .ai-active-model-dot {
+            width: 7px; height: 7px;
+            background: #3fb950;
+            border-radius: 50%;
+            box-shadow: 0 0 6px rgba(63,185,80,0.6);
+            flex-shrink: 0;
+            animation: dotPulse 2s ease-in-out infinite;
+        }
+
+        @keyframes dotPulse {
+            0%, 100% { box-shadow: 0 0 4px rgba(63,185,80,0.5); }
+            50% { box-shadow: 0 0 10px rgba(63,185,80,0.9); }
+        }
+
+        .ai-active-model-info { flex: 1; }
+
+        .ai-active-model-name {
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--text-color);
+            font-family: 'Share Tech Mono', monospace;
+            display: block;
+        }
+
+        .ai-active-model-provider {
+            font-size: 10px;
+            color: var(--text-dim);
+            font-family: 'Share Tech Mono', monospace;
+        }
+
+        .ai-change-model-btn {
+            background: none;
+            border: 1px solid rgba(229,0,26,0.25);
+            border-radius: 3px;
+            color: var(--text-dim);
+            font-size: 10px;
+            font-family: 'Orbitron', monospace;
+            letter-spacing: 0.5px;
+            padding: 4px 9px;
+            cursor: pointer;
+            transition: all 0.15s;
+            transform: none !important;
+        }
+
+        .ai-change-model-btn:hover {
+            color: var(--primary);
+            border-color: var(--primary);
+            background: rgba(229,0,26,0.08);
+            box-shadow: none;
+        }
+
+        .ai-nodata-msg {
+            font-size: 11px;
+            color: var(--text-dim);
+            font-family: 'Share Tech Mono', monospace;
+            background: rgba(229,0,26,0.04);
+            border: 1px solid rgba(229,0,26,0.1);
+            border-radius: 4px;
+            padding: 8px 12px;
+            text-align: center;
+        }
+
+        .ai-prompt-btn .prompt-arrow {
+            font-size: 18px;
+            color: var(--text-dim);
+            transition: color 0.15s, transform 0.15s;
+            flex-shrink: 0;
+            line-height: 1;
+        }
+
+        .ai-prompt-btn:hover .prompt-arrow {
+            color: var(--primary);
+            transform: translateX(2px);
+        }
+
+        .ai-disabled {
+            opacity: 0.35;
+            cursor: not-allowed !important;
+            pointer-events: none;
+        }
+
+
+            list-style: none;
+            padding: 0;
+            margin: 0;
+            background: rgba(6, 2, 4, 0.9);
+        }
+
+        .enum-item {
+            padding: 9px 12px;
+            font-size: 11.5px;
+            font-family: 'Share Tech Mono', monospace;
+            border-bottom: 1px solid rgba(229, 0, 26, 0.05);
+            cursor: pointer;
+            word-break: break-all;
+            transition: all 0.15s;
+            position: relative;
+            color: #c4a8a8;
+        }
+
+        .enum-item:last-child {
+            border-bottom: none;
+        }
+
+        .enum-item:hover {
+            background: rgba(229, 0, 26, 0.07);
+            padding-left: 18px;
+            color: var(--text-color);
+        }
+
+        .enum-item::before {
+            content: '▶';
+            position: absolute;
+            left: 5px;
+            opacity: 0;
+            color: var(--primary);
+            transition: opacity 0.15s;
+            font-size: 8px;
+            top: 50%;
+            transform: translateY(-50%);
+        }
+
+        .enum-item:hover::before {
+            opacity: 1;
+        }
+
+        .cm-search-match {
+            background-color: rgba(229, 0, 26, 0.35);
+            border-radius: 2px;
+            outline: 1px solid rgba(229, 0, 26, 0.6);
+        }
+
+        .CodeMirror {
+            width: 100%;
+            flex: 1;
+            height: auto;
+            font-size: 13px;
+            font-family: 'Share Tech Mono', monospace;
+            background: #060204 !important;
+        }
+
+        /* Override CodeMirror theme */
+        .CodeMirror-gutters {
+            background: #060204 !important;
+            border-right: 1px solid rgba(229, 0, 26, 0.15) !important;
+        }
+
+        .CodeMirror-linenumber {
+            color: #442222 !important;
+        }
+
+        /* Scrollbar styling */
+        ::-webkit-scrollbar { width: 5px; }
+        ::-webkit-scrollbar-track { background: #060204; }
+        ::-webkit-scrollbar-thumb { background: rgba(229,0,26,0.3); border-radius: 2px; }
+        ::-webkit-scrollbar-thumb:hover { background: rgba(229,0,26,0.55); }
+
+        /* Count badge in header */
+        #total-count {
+            font-size: 11px !important;
+            color: var(--primary) !important;
+            background: rgba(229, 0, 26, 0.12) !important;
+            border: 1px solid rgba(229, 0, 26, 0.3) !important;
+            padding: 2px 8px !important;
+            border-radius: 2px !important;
+            font-family: 'Orbitron', monospace !important;
+            font-weight: 700 !important;
+            animation: countGlow 2s ease-in-out infinite;
+        }
+
+        @keyframes countGlow {
+            0%, 100% { box-shadow: none; }
+            50% { box-shadow: 0 0 8px rgba(229,0,26,0.3); }
+        }
+
+        /* Futuristic corner brackets on editor */
+        .editor-corner-tl, .editor-corner-br {
+            position: absolute;
+            width: 20px; height: 20px;
+            z-index: 10;
+            pointer-events: none;
+        }
+    </style>
+    <style id="md-report-css">
+        /* ===== Colorful AI report (also reused by fullscreen + HTML export) ===== */
+        .md-report {
+            --r-bg: #0b0b12; --r-text: #e6e3ee; --r-dim: #8b86a0; --r-line: #2b2036;
+            --r-red: #ff2d4a; --r-orange: #ff7a1a; --r-amber: #ffc233; --r-green: #35d07f;
+            --r-cyan: #38d6ff; --r-blue: #4f8cff; --r-pink: #ff5fa2; --r-violet: #a67cff;
+            color: var(--r-text); font-family: 'Segoe UI', Roboto, system-ui, -apple-system, sans-serif;
+            font-size: 13px; line-height: 1.65; white-space: normal; word-break: break-word;
+        }
+        .md-report > *:first-child { margin-top: 0; }
+        .md-report h1, .md-report h2, .md-report h3, .md-report h4, .md-report h5, .md-report h6 {
+            font-family: 'Orbitron', 'Segoe UI', sans-serif; letter-spacing: 1px; margin: 22px 0 10px; line-height: 1.3;
+        }
+        .md-report h1 { font-size: 1.55em; text-transform: uppercase;
+            background: linear-gradient(90deg, var(--r-red), var(--r-orange), var(--r-amber));
+            -webkit-background-clip: text; background-clip: text; color: transparent;
+            padding-bottom: 8px; border-bottom: 2px solid; border-image: linear-gradient(90deg, var(--r-red), var(--r-orange), transparent) 1; }
+        .md-report h2 { font-size: 1.22em; color: var(--r-orange); padding: 5px 0 5px 12px;
+            border-left: 4px solid var(--r-orange); background: linear-gradient(90deg, rgba(255,122,26,.14), transparent 70%); }
+        .md-report h3 { font-size: 1.05em; color: var(--r-amber); padding-left: 10px; border-left: 3px solid var(--r-amber); }
+        .md-report h4 { font-size: .95em; color: var(--r-cyan); }
+        .md-report h5, .md-report h6 { font-size: .88em; color: var(--r-violet); }
+        .md-report p { margin: 8px 0; }
+        .md-report strong { color: #ffd479; font-weight: 700; }
+        .md-report em { color: #9ad1ff; }
+        .md-report a { color: var(--r-cyan); text-decoration: none; border-bottom: 1px dashed rgba(56,214,255,.5); }
+        .md-report a:hover { color: #fff; border-bottom-style: solid; }
+        .md-report hr { border: 0; height: 2px; margin: 18px 0;
+            background: linear-gradient(90deg, var(--r-red), var(--r-orange), var(--r-amber), var(--r-green), var(--r-cyan), var(--r-violet)); opacity: .7; }
+        .md-report code { font-family: 'Share Tech Mono', Consolas, monospace; font-size: .92em;
+            background: rgba(255,95,162,.13); color: #ff9cc4; padding: 1px 6px; border-radius: 4px; border: 1px solid rgba(255,95,162,.22); }
+        .md-report pre { margin: 12px 0; padding: 12px 14px; background: #05050a; border: 1px solid #1d2b35;
+            border-left: 4px solid var(--r-cyan); border-radius: 6px; overflow-x: auto; }
+        .md-report pre code { background: none; border: 0; padding: 0; color: #8ff0c8; font-size: .9em; white-space: pre; }
+        .md-report blockquote { margin: 12px 0; padding: 8px 14px; border-left: 4px solid var(--r-violet);
+            background: rgba(166,124,255,.09); border-radius: 0 6px 6px 0; color: #d9ccff; }
+        .md-report blockquote p { margin: 4px 0; }
+
+        .md-report ul, .md-report ol { list-style: none; margin: 10px 0; padding: 0; }
+        .md-report li { position: relative; margin: 5px 0; padding-left: 28px; }
+        .md-report ul li::before { content: '◆'; position: absolute; left: 6px; top: 0; color: var(--r-orange); font-size: .8em; line-height: 1.9; }
+        .md-report ul li.lv1::before { color: var(--r-cyan); content: '◇'; }
+        .md-report ul li.lv2::before { color: var(--r-green); content: '▸'; }
+        .md-report ol li::before { content: attr(data-n); position: absolute; left: 0; top: 1px; min-width: 20px; height: 20px;
+            border-radius: 10px; text-align: center; font-size: 11px; font-weight: 700; line-height: 20px; padding: 0 4px;
+            color: #120810; background: linear-gradient(135deg, var(--r-amber), var(--r-orange)); }
+        .md-report li.lv1 { margin-left: 22px; } .md-report li.lv2 { margin-left: 44px; }
+
+        .md-table-wrap { overflow-x: auto; margin: 14px 0; border: 1px solid var(--r-line); border-radius: 8px;
+            box-shadow: 0 0 0 1px rgba(255,45,74,.06), 0 6px 22px rgba(0,0,0,.4); }
+        .md-report table { border-collapse: collapse; width: 100%; font-size: .93em; }
+        .md-report th { background: linear-gradient(90deg, #8b0a1e, #c2401a); color: #fff; text-align: left;
+            font-family: 'Orbitron', 'Segoe UI', sans-serif; font-size: .78em; letter-spacing: 1px; text-transform: uppercase;
+            padding: 9px 11px; white-space: nowrap; }
+        .md-report td { padding: 9px 11px; border-top: 1px solid var(--r-line); vertical-align: top; min-width: 90px; }
+        .md-report tbody tr:nth-child(odd) td { background: rgba(255,255,255,.025); }
+        .md-report tbody tr:hover td { background: rgba(255,122,26,.09); }
+        .md-report td:first-child { min-width: 0; }
+        .md-rank { display: inline-flex; align-items: center; justify-content: center; min-width: 26px; height: 26px; padding: 0 6px;
+            border-radius: 13px; font-weight: 800; color: #170a0a; background: linear-gradient(135deg, var(--r-amber), var(--r-red)); box-shadow: 0 0 10px rgba(255,90,40,.45); }
+
+        .sev { display: inline-block; padding: 1px 8px; border-radius: 999px; font-size: .78em; font-weight: 800; letter-spacing: .6px;
+            text-transform: uppercase; vertical-align: middle; white-space: nowrap; }
+        .sev-critical { background: var(--r-red); color: #fff; box-shadow: 0 0 12px rgba(255,45,74,.65); }
+        .sev-high { background: var(--r-orange); color: #1b0c00; box-shadow: 0 0 10px rgba(255,122,26,.5); }
+        .sev-medium { background: var(--r-amber); color: #221600; }
+        .sev-low { background: var(--r-green); color: #04170d; }
+        .sev-info { background: var(--r-blue); color: #fff; }
+
+        .md-summary { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 0 0 16px; padding: 10px 12px;
+            border: 1px solid var(--r-line); border-radius: 8px; background: linear-gradient(90deg, rgba(255,45,74,.10), rgba(56,214,255,.06)); }
+        .md-summary .lbl { font-family: 'Orbitron', 'Segoe UI', sans-serif; font-size: .72em; letter-spacing: 1.5px; color: var(--r-dim); text-transform: uppercase; margin-right: 4px; }
+        .md-summary .sev b { margin-right: 4px; }
+
+    </style>
+
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/codemirror.min.css">
+    <link rel="stylesheet"
+        href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/theme/material-darker.min.css">
+</head>
+
+<body>
+
+    <div style="position: absolute; top: 24px; right: 24px; z-index: 1000;">
+        <a class="github-button" href="https://github.com/Tig3rsec"
+            data-color-scheme="no-preference: dark; light: dark; dark: dark;" data-size="large"
+            data-show-count="true" aria-label="Follow Tig3rsec on GitHub">Follow</a>
+    </div>
+
+    <!-- Settings Overlay -->
+    <div class="settings-overlay" id="settings-overlay" onclick="closeSettingsOnOverlay(event)">
+        <div class="settings-panel">
+            <div class="settings-header">
+                <div class="settings-header-left">
+                    <div class="settings-icon-wrap">⚙</div>
+                    <div>
+                        <h3>AI Configuration</h3>
+                        <div class="settings-subtitle">OpenRouter API · Model Selection</div>
+                    </div>
+                </div>
+                <button class="settings-close" onclick="closeSettings()">✕</button>
+            </div>
+
+            <div class="settings-body">
+                <!-- API Key Section -->
+                <div class="settings-section-label">
+                    <span class="settings-section-dot"></span>
+                    API KEY
+                </div>
+                <div class="settings-field">
+                    <!-- shown when a key is already saved -->
+                    <div class="key-saved" id="key-saved">
+                        <span class="key-saved-badge">✓ SAVED</span>
+                        <span class="key-saved-mask" id="key-saved-mask"></span>
+                        <button class="key-act-btn" type="button" onclick="editKey()">Change</button>
+                        <button class="key-act-btn danger" type="button" onclick="removeKey()">Remove</button>
+                    </div>
+                    <!-- shown only when there is no key yet, or after clicking Change -->
+                    <div id="key-edit">
+                    <div class="settings-key-input-wrap">
+                        <input type="password" id="or-api-key" placeholder="sk-or-v1-·····················" autocomplete="off" spellcheck="false">
+                        <button class="key-toggle-btn" id="key-toggle" onclick="toggleKeyVisibility()" title="Show/hide key">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                        </button>
+                    </div>
+                    <div class="key-cancel" id="key-cancel"><button class="key-act-btn danger" type="button" onclick="renderKeyField(false)">Cancel — keep the saved key</button></div>
+                    </div>
+                    <div class="settings-hint">
+                        Enter it once — it stays saved. &nbsp;·&nbsp; Free key at <a href="https://openrouter.ai/keys" target="_blank" rel="noopener">openrouter.ai/keys</a>
+                        &nbsp;·&nbsp; Saved to <code>localStorage</code> in your browser only.
+                    </div>
+                </div>
+
+                <!-- Model Section -->
+                <div class="settings-section-label" style="margin-top:18px;">
+                    <span class="settings-section-dot"></span>
+                    MODEL
+                </div>
+                <div class="settings-field">
+                    <div class="model-toolbar">
+                        <input type="text" class="model-search" id="model-search" placeholder="Search models…" autocomplete="off" spellcheck="false">
+                        <button class="model-chip active" data-filter="featured" type="button">Featured</button>
+                        <button class="model-chip" data-filter="all" type="button">All</button>
+                        <button class="model-chip" data-filter="free" type="button">Free</button>
+                        <button class="model-chip" data-filter="paid" type="button">Paid</button>
+                    </div>
+                    <div class="model-scroll">
+                        <div class="model-grid" id="model-grid">
+                            <!-- populated by JS -->
+                        </div>
+                    </div>
+                    <div class="model-load-status" id="model-load-status">
+                        <span id="model-load-text">Loading live model list…</span>
+                        <button class="model-refresh-btn" type="button" onclick="loadModels(true)">↻ Refresh</button>
+                    </div>
+                    <label class="fallback-row">
+                        <input type="checkbox" id="or-fallback" checked>
+                        If the chosen model fails, automatically retry on a free model
+                    </label>
+                </div>
+
+                <!-- URL fetch proxy -->
+                <div class="settings-section-label" style="margin-top:18px;">
+                    <span class="settings-section-dot"></span>
+                    URL FETCHING
+                </div>
+                <div class="settings-field">
+                    <div class="settings-hint" style="margin:0 0 6px;">Your own proxy (optional) — tried right after the direct request</div>
+                    <div class="settings-key-input-wrap">
+                        <input type="text" id="fetch-proxy" placeholder="https://your-worker.workers.dev/?url={url}&amp;ua={ua}" autocomplete="off" spellcheck="false">
+                    </div>
+                    <div class="settings-hint">
+                        <code>{url}</code> = target URL, <code>{ua}</code> = browser agent. A browser page can't change its own
+                        User-Agent, so <b>agent rotation only works through your own proxy</b> (the Worker code below supports it).
+                    </div>
+
+                    <div class="settings-hint" style="margin:14px 0 6px;">Browser agent sent through your proxy</div>
+                    <select id="ua-mode" class="settings-select"></select>
+
+                    <div class="settings-hint" style="margin:14px 0 6px;">Public CORS proxies — one per line, tried top to bottom</div>
+                    <div class="settings-key-input-wrap">
+                        <textarea id="proxy-list" rows="6" spellcheck="false" autocomplete="off"></textarea>
+                    </div>
+                    <div class="settings-hint">
+                        <code>{url}</code> encoded · <code>{rawurl}</code> not encoded · start a line with <code>json:</code> for proxies that reply
+                        <code>{"contents": …}</code> · <code>#</code> comments a line out. Public proxies come and go — add or remove freely.
+                        <button class="key-act-btn" type="button" style="margin-left:6px;" onclick="resetProxyList()">↺ Reset list</button>
+                    </div>
+
+                    <details class="proxy-help">
+                        <summary>Sites still blocked (403)? Make your own free proxy →</summary>
+                        <div class="settings-hint" style="margin-top:8px;">
+                            Public proxies share IPs that firewalls (Cloudflare etc.) often block. A private
+                            <b>Cloudflare Worker</b> is the reliable fix: create one at
+                            <a href="https://dash.cloudflare.com/?to=/:account/workers-and-pages" target="_blank" rel="noopener">dash.cloudflare.com</a>,
+                            paste this, deploy, then put <code>https://NAME.workers.dev/?url={url}&amp;ua={ua}</code> in the first box.
+                            Keep the worker URL private — it fetches whatever it is asked to.
+                        </div>
+                        <pre class="proxy-snippet" id="proxy-snippet">export default {
+  async fetch(req) {
+    const q = new URL(req.url).searchParams;
+    const t = q.get('url');
+    if (!t || !/^https?:\/\//i.test(t)) return new Response('missing ?url=', { status: 400 });
+    const ua = q.get('ua') || 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36';
+    const r = await fetch(t, { redirect: 'follow', headers: {
+      'User-Agent': ua, 'Accept': '*/*', 'Accept-Language': 'en-US,en;q=0.9' } });
+    return new Response(r.body, { status: r.status, headers: {
+      'Content-Type': r.headers.get('content-type') || 'text/plain',
+      'Access-Control-Allow-Origin': '*' } });
+  }
+}</pre>
+                        <button class="key-act-btn" type="button" onclick="copyProxySnippet(this)">⧉ Copy worker code</button>
+                    </details>
+                </div>
+
+                <!-- Save Button -->
+                <div class="settings-actions">
+                    <div class="settings-status" id="settings-status"></div>
+                    <button class="settings-save" onclick="saveSettings()">
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+                        Save &amp; Apply
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Fullscreen AI report viewer -->
+    <div class="ai-fs-overlay" id="ai-fs-overlay">
+        <div class="ai-fs-bar">
+            <div class="ttl"><span id="ai-fs-title">AI Report</span><span class="sub" id="ai-fs-sub"></span></div>
+            <button class="ai-tool-btn" onclick="copyAIReport(this)">⧉ Copy</button>
+            <button class="ai-tool-btn" onclick="downloadAIReport('md')">⭳ .md</button>
+            <button class="ai-tool-btn" onclick="downloadAIReport('html')">⭳ .html report</button>
+            <button class="ai-tool-btn primary" onclick="closeAIFullscreen()">✕ Close (Esc)</button>
+        </div>
+        <div class="ai-fs-scroll"><div class="md-report" id="ai-fs-body"></div></div>
+    </div>
+
+    <h2>JS Recon - Bug Hunter Edition</h2>
+    <div class="created-by">Created by <a href="https://github.com/Tig3rsec" target="_blank" rel="noopener noreferrer">D4RK TIG3R</a></div>
+
+    <div class="controls">
+        <input type="text" id="jsurl" placeholder="https://example.com/script.js" aria-label="JS Source URL">
+        <button onclick="fetchJS()" title="Fetch content from URL">
+            <span>Fetch URL</span>
+        </button>
+
+        <span class="divider">OR</span>
+
+        <input type="file" id="fileInput" accept=".js,.json,.txt" title="Upload a local file">
+
+        <button onclick="formatJS()" style="background: var(--primary); color: #fff; border-color: var(--primary);"
+            title="Perfectly format the code">
+            <span>Beautify Code</span>
+        </button>
+
+        <button onclick="openSettings()" style="background: rgba(229,0,26,0.08); border-color: var(--border-hot); margin-left: auto;" title="Configure AI settings">
+            ⚙ Settings
+        </button>
+    </div>
+
+    <div class="main-wrapper">
+        <div class="editor-container">
+            <textarea id="code"></textarea>
+        </div>
+
+        <div class="sidebar">
+            <div class="sidebar-header">
+                <span>🔍 JS Recon</span>
+                <span id="total-count">0</span>
+            </div>
+            <div class="sidebar-tabs">
+                <div class="sidebar-tab active" id="tab-extract" onclick="switchTab('extract')">Extracted</div>
+                <div class="sidebar-tab" id="tab-ai" onclick="switchTab('ai')">✦ AI Analysis</div>
+            </div>
+            <div class="tab-pane active" id="pane-extract">
+                <div id="enum-content">
+                    <div style="padding: 20px; text-align: center; color: #8b949e; font-size: 13px;">
+                        Load or beautify code to extract URLs, endpoints, and secrets.
+                    </div>
+                </div>
+            </div>
+            <div class="tab-pane" id="pane-ai">
+                <div class="ai-panel" id="ai-panel-inner">
+                    <!-- populated by JS -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/codemirror.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/mode/javascript/javascript.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/addon/search/searchcursor.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/js-beautify/1.15.4/beautify.min.js"></script>
+
+    <script>
+        const editor = CodeMirror.fromTextArea(document.getElementById("code"), {
+            mode: "javascript",
+            theme: "material-darker",
+            lineNumbers: true,
+            indentUnit: 4,
+            tabSize: 4,
+            matchBrackets: true,
+            autoCloseBrackets: true,
+            lineWrapping: false
+        });
+
+        editor.setValue('// Paste your minified JS code here, upload a file, or fetch from a URL.\n\nconst test=function(){console.log("Hello Bug Hunters!")};');
+
+        // ---------- URL fetching: direct -> your proxy -> public proxies ----------
+        // The browser blocks cross-site reads (CORS), so a single public proxy is fragile and
+        // many now answer 403. We try several routes and skip block/challenge pages.
+        // Realistic browser agents. A web page cannot set its own User-Agent, so these are only
+        // sent through YOUR proxy (Cloudflare Worker) via the {ua} placeholder.
+        const BROWSER_AGENTS = [
+            { id: 'chrome-win',  name: 'Chrome · Windows',  ua: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36' },
+            { id: 'firefox-win', name: 'Firefox · Windows', ua: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:141.0) Gecko/20100101 Firefox/141.0' },
+            { id: 'safari-mac',  name: 'Safari · macOS',    ua: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.5 Safari/605.1.15' },
+            { id: 'chrome-and',  name: 'Chrome · Android',  ua: 'Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Mobile Safari/537.36' },
+            { id: 'edge-win',    name: 'Edge · Windows',    ua: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36 Edg/140.0.0.0' },
+            { id: 'chrome-mac',  name: 'Chrome · macOS',    ua: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36' },
+            { id: 'safari-ios',  name: 'Safari · iPhone',   ua: 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.5 Mobile/15E148 Safari/604.1' },
+        ];
+        const AUTO_UA_TRIES = 4;  // how many agents "auto-rotate" cycles through on one proxy
+
+        // Public CORS proxies, one template per line. {url}=encoded, {rawurl}=raw, json: prefix = {"contents":...} reply.
+        const DEFAULT_PROXIES = [
+            'https://api.allorigins.win/raw?url={url}',
+            'https://corsproxy.io/?url={url}',
+            'https://corsproxy.io/?{url}',
+            'https://api.codetabs.com/v1/proxy/?quest={url}',
+            'https://thingproxy.freeboard.io/fetch/{rawurl}',
+            'https://cors.eu.org/{rawurl}',
+            'https://yacdn.org/proxy/{rawurl}',
+            'https://api.cors.lol/?url={url}',
+            'json:https://api.allorigins.win/get?url={url}',
+        ];
+
+        function getSavedProxy() { try { return localStorage.getItem('js-proxy') || ''; } catch (e) { return ''; } }
+        function getUAMode() { try { return localStorage.getItem('js-ua') || 'auto'; } catch (e) { return 'auto'; } }
+        function getProxyTemplates() {
+            let raw = '';
+            try { raw = localStorage.getItem('js-proxies') || ''; } catch (e) {}
+            const lines = raw.split('\n').map(l => l.trim()).filter(l => l && !l.startsWith('#'));
+            return lines.length ? lines : DEFAULT_PROXIES.slice();
+        }
+        function fillUAOptions() {
+            const sel = document.getElementById('ua-mode');
+            if (sel.options.length) return;
+            sel.innerHTML = `<option value="auto">Auto-rotate (try ${AUTO_UA_TRIES} different browsers)</option>` +
+                BROWSER_AGENTS.map(a => `<option value="${a.id}">${esc(a.name)}</option>`).join('');
+        }
+        function resetProxyList() {
+            document.getElementById('proxy-list').value = DEFAULT_PROXIES.join('\n');
+        }
+
+        function applyTemplate(tpl, target, ua) {
+            let out = tpl.replace(/\{rawurl\}/g, () => target)
+                         .replace(/\{url\}/g, () => encodeURIComponent(target))
+                         .replace(/\{ua\}/g, () => encodeURIComponent(ua || ''));
+            if (!/\{(raw)?url\}/.test(tpl)) out += encodeURIComponent(target);   // no placeholder: append
+            return out;
+        }
+
+        function buildRoutes(target) {
+            const routes = [{ name: 'Direct request', url: target, ms: 10000, group: 'direct' }];
+
+            const custom = getSavedProxy();
+            if (custom) {
+                const mode = getUAMode();
+                const agents = mode === 'auto' ? BROWSER_AGENTS.slice(0, AUTO_UA_TRIES)
+                             : [BROWSER_AGENTS.find(a => a.id === mode) || BROWSER_AGENTS[0]];
+                agents.forEach(a => {
+                    let u = applyTemplate(custom, target, a.ua);
+                    // template had {url} but no {ua}: add the agent as an extra query parameter
+                    if (/\{url\}/.test(custom) && !/\{ua\}/.test(custom) && u.includes('?')) u += '&ua=' + encodeURIComponent(a.ua);
+                    routes.push({ name: 'Your proxy · ' + a.name, url: u, ms: 20000, group: 'custom' });
+                });
+            }
+
+            getProxyTemplates().forEach(line => {
+                const json = /^json:/i.test(line);
+                const tpl = line.replace(/^json:/i, '').trim();
+                let host = tpl; try { host = new URL(tpl.replace(/\{[a-z]+\}/g, 'x')).hostname; } catch (e) {}
+                routes.push({ name: host + (json ? ' (json)' : ''), url: applyTemplate(tpl, target, ''), json, ms: 15000, group: 'pub:' + tpl });
+            });
+            return routes;
+        }
+
+        function looksBlocked(text) {
+            const head = String(text).slice(0, 4000).toLowerCase();
+            if (!/^\s*(<!doctype html|<html|<head|<body|<title)/.test(head) && !head.includes('<title>')) return false;
+            return /just a moment|attention required|access denied|request blocked|captcha|cf-chl|error 10\d\d|403 forbidden|enable javascript and cookies|are you a robot|akamai|incapsula/.test(head);
+        }
+
+        async function fetchWithTimeout(url, ms) {
+            const ctrl = new AbortController();
+            const timer = setTimeout(() => ctrl.abort(), ms);
+            try { return await fetch(url, { signal: ctrl.signal, credentials: 'omit', cache: 'no-store', redirect: 'follow' }); }
+            finally { clearTimeout(timer); }
+        }
+
+        async function fetchTextViaRoutes(target, onProgress) {
+            const routes = buildRoutes(target);
+            const failures = [];
+            const skipGroups = new Set();
+            for (let i = 0; i < routes.length; i++) {
+                const r = routes[i];
+                if (skipGroups.has(r.group)) continue;
+                onProgress && onProgress(r.name, i + 1, routes.length);
+                try {
+                    const res = await fetchWithTimeout(r.url, r.ms);
+                    if (!res.ok) { const e = new Error('HTTP ' + res.status); e.http = res.status; throw e; }
+                    let text;
+                    if (r.json) {
+                        const j = await res.json();
+                        const code = j?.status?.http_code;
+                        if (code && code >= 400) { const e = new Error('HTTP ' + code); e.http = code; throw e; }
+                        if (typeof j?.contents !== 'string' || !j.contents) throw new Error('empty response');
+                        text = j.contents;
+                    } else {
+                        text = await res.text();
+                    }
+                    if (!text.trim()) throw new Error('empty response');
+                    if (looksBlocked(text)) { const e = new Error('firewall / challenge page'); e.http = 403; throw e; }
+                    return { text, via: r.name, failures };
+                } catch (err) {
+                    const msg = err.name === 'AbortError' ? 'timed out'
+                              : (err.message === 'Failed to fetch' ? (r.group === 'direct' ? 'blocked by CORS / network' : 'unreachable') : err.message);
+                    failures.push(`• ${r.name}: ${msg}`);
+                    // Another browser agent only helps against a block (4xx). If the proxy itself is
+                    // down / timing out, don't burn time retrying it with the remaining agents.
+                    if (r.group === 'custom' && !(err.http >= 400 && err.http < 500)) skipGroups.add('custom');
+                }
+            }
+            const e = new Error('All routes failed'); e.failures = failures; throw e;
+        }
+
+        let fetchBusy = false;
+        async function fetchJS() {
+            if (fetchBusy) return;
+            const urlInput = document.getElementById("jsurl");
+            let url = urlInput.value.trim();
+
+            if (!url) { alert("Please enter a valid URL."); return; }
+            if (!/^[a-z][a-z0-9+.-]*:\/\//i.test(url)) url = 'https://' + url;      // allow "site.com/x.js"
+            try { const u = new URL(url); if (!/^https?:$/.test(u.protocol)) throw 0; url = u.href; }
+            catch (e) { alert("That doesn't look like a valid http(s) URL."); return; }
+
+            fetchBusy = true;
+            const originalVal = editor.getValue();
+            editor.setValue("// Fetching " + url + " …");
+            try {
+                const { text, via } = await fetchTextViaRoutes(url, (name, n, total) =>
+                    editor.setValue(`// Fetching ${url}\n// Trying ${name} (${n}/${total}) …`));
+                console.log('[JS Recon] fetched via', via);
+                editor.setValue(text);
+                setTimeout(extractInfo, 100);
+                urlInput.value = "";
+            } catch (error) {
+                console.error("Error fetching JS:", error);
+                editor.setValue(originalVal);
+                const list = (error.failures || [error.message]).join('\n');
+                alert("Could not fetch this URL. Every route failed:\n\n" + list +
+                    "\n\nIf they all say 403, the site's firewall is blocking browsers/proxies.\n" +
+                    "Fixes:\n" +
+                    "1) ⚙ Settings → URL fetching → your own free Cloudflare Worker (also enables browser-agent rotation), or\n" +
+                    "2) open the URL in a new tab, select all, copy, and paste it into the editor (or save it and use Upload).");
+            } finally { fetchBusy = false; }
+        }
+
+        document.getElementById("jsurl").addEventListener("keydown", e => { if (e.key === "Enter") fetchJS(); });
+
+        function copyProxySnippet(btn) {
+            const text = document.getElementById('proxy-snippet').textContent;
+            const done = () => { const o = btn.textContent; btn.textContent = '✓ Copied'; setTimeout(() => btn.textContent = o, 1300); };
+            if (navigator.clipboard?.writeText) navigator.clipboard.writeText(text).then(done, () => fallbackCopy(text, done));
+            else fallbackCopy(text, done);
+        }
+
+        document.getElementById("fileInput").addEventListener("change", function (e) {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = () => {
+                editor.setValue(reader.result);
+                setTimeout(extractInfo, 100);
+            };
+            reader.onerror = () => {
+                alert("Error reading file");
+            }
+            reader.readAsText(file);
+        });
+
+        function formatJS() {
+            let code = editor.getValue();
+
+            if (!code.trim()) {
+                alert("No code loaded in the editor.");
+                return;
+            }
+
+            try {
+                const formatted = js_beautify(code, {
+                    indent_size: 4,
+                    indent_char: " ",
+                    preserve_newlines: true,
+                    max_preserve_newlines: 2,
+                    wrap_line_length: 120,
+                    break_chained_methods: true,
+                    keep_array_indentation: false,
+                    space_before_conditional: true,
+                    unescape_strings: true,
+                    jslint_happy: true,
+                    end_with_newline: true,
+                    comma_first: false,
+                    e4x: true
+                });
+
+                editor.setValue(formatted);
+                editor.setCursor(0, 0);
+                setTimeout(extractInfo, 100);
+            } catch (err) {
+                console.error("Error beautifying JS:", err);
+                alert("Failed to format code. It might contain critical syntax errors.");
+            }
+        }
+        let activeMarks = [];
+
+        function highlightMatch(text, type) {
+            activeMarks.forEach(mark => mark.clear());
+            activeMarks = [];
+
+            const cursor = editor.getSearchCursor(text);
+            let firstMatch = null;
+
+            while (cursor.findNext()) {
+                if (!firstMatch) firstMatch = { from: cursor.from(), to: cursor.to() };
+                const mark = editor.markText(cursor.from(), cursor.to(), { className: "cm-search-match" });
+                activeMarks.push(mark);
+            }
+
+            if (firstMatch) {
+                editor.scrollIntoView(firstMatch, 100);
+                editor.setSelection(firstMatch.from, firstMatch.to);
+                editor.focus();
+            }
+        }
+
+        function extractInfo() {
+            const code = editor.getValue();
+            if (!code.trim()) return;
+
+            const enumContent = document.getElementById("enum-content");
+            enumContent.innerHTML = "";
+            let totalCount = 0;
+
+            const extractors = [
+                {
+                    title: "DOMAINS & SUBDOMAINS",
+                    theme: "theme-domains",
+                    getItems: (code) => {
+                        const results = new Set();
+                        let regex = /['"](?:https?:\/\/)?([a-zA-Z0-9][a-zA-Z0-9.-]*\.[a-zA-Z]{2,10})[:\/]?/g;
+                        let match;
+                        while ((match = regex.exec(code)) !== null) {
+                            if (!match[1].includes("/") && !match[1].includes("\\")) results.add(match[1]);
+                        }
+                        return Array.from(results);
+                    }
+                },
+                {
+                    title: "INTERNAL IPs & PORTS",
+                    theme: "theme-ips",
+                    getItems: (code) => {
+                        const ips = code.match(/\b(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)(?::[0-9]{1,5})?\b/g);
+                        const localHosts = code.match(/(?:http:\/\/)?localhost:[0-9]{1,5}/g);
+                        return Array.from(new Set([...(ips || []), ...(localHosts || [])]));
+                    }
+                },
+
+                {
+                    title: "FULL URLs",
+                    theme: "theme-urls",
+                    getItems: (code) => {
+                        const urls = code.match(/https?:\/\/[a-zA-Z0-9.\-_~:/?#\[\]@!$&'()*+,;=%]+/g);
+                        return urls ? Array.from(new Set(urls)) : [];
+                    }
+                },
+                {
+                    title: "DEV, STAGING & TEST URLs",
+                    theme: "theme-configs",
+                    getItems: (code) => {
+                        const envs = code.match(/https?:\/\/[a-zA-Z0-9.\-_]*(?:dev|staging|stg|test|uat|preprod)[a-zA-Z0-9.\-_]*\.[a-zA-Z]{2,10}/gi);
+                        return envs ? Array.from(new Set(envs)) : [];
+                    }
+                },
+                {
+                    title: "WEBSOCKET ENDPOINTS",
+                    theme: "theme-network",
+                    getItems: (code) => {
+                        const wss = code.match(/wss?:\/\/[a-zA-Z0-9.\-_~:/?#\[\]@!$&'()*+,;=%]+/g);
+                        return wss ? Array.from(new Set(wss)) : [];
+                    }
+                },
+                {
+                    title: "OAUTH / AUTH URLs",
+                    theme: "theme-secrets",
+                    getItems: (code) => {
+                        const oauth = code.match(/https?:\/\/[^\s"'<>]*(?:oauth|authorize|login|signin|token|sso|saml)[^\s"'<>]*/gi);
+                        return oauth ? Array.from(new Set(oauth)) : [];
+                    }
+                },
+
+                {
+                    title: "API ENDPOINTS & ROUTES",
+                    theme: "theme-apis",
+                    getItems: (code) => {
+                        const paths = new Set();
+                        let match;
+                        const regex = /['"](\/[a-zA-Z0-9_.-]+(?:\/[a-zA-Z0-9_.-]+)*\/?(?:\?[a-zA-Z0-9_.-]+=[^"']*)?)['"]/g;
+                        while ((match = regex.exec(code)) !== null) {
+                            if (match[1].length > 1 && !match[1].startsWith('//')) paths.add(match[1]);
+                        }
+                        return Array.from(paths);
+                    }
+                },
+                {
+                    title: "VERSIONED APIs (v1, v2)",
+                    theme: "theme-apis",
+                    getItems: (code) => {
+                        const paths = new Set();
+                        let match;
+                        const regex = /['"](\/v[1-9]\/[a-zA-Z0-9_.-]+(?:\/[a-zA-Z0-9_.-]+)*)['"]/gi;
+                        while ((match = regex.exec(code)) !== null) paths.add(match[1]);
+                        return Array.from(paths);
+                    }
+                },
+                {
+                    title: "GRAPHQL ENDPOINTS",
+                    theme: "theme-graphql",
+                    getItems: (code) => {
+                        const gql = code.match(/(?:https?:\/\/[a-zA-Z0-9.-]+)?\/graphql(?:\/v1)?/gi);
+                        const strGql = code.match(/['"](query|mutation)\s*[{]/gi);
+                        const results = Array.from(new Set(gql || []));
+                        if (strGql) results.push("GraphQL Query Definitions Found");
+                        return results;
+                    }
+                },
+                {
+                    title: "ADMIN / INTERNAL FUNCTIONS",
+                    theme: "theme-admin",
+                    getItems: (code) => {
+                        const admins = code.match(/['"](\/(?:admin|internal|priv|manage|dashboard|superuser|root)[a-zA-Z0-9_.\-\/]*)['"]/gi);
+                        return admins ? Array.from(new Set(admins.map(a => a.replace(/['"]/g, '')))) : [];
+                    }
+                },
+                {
+                    title: "HIDDEN ENDPOINTS",
+                    theme: "theme-hidden",
+                    getItems: (code) => {
+                        const hidden = code.match(/['"](\/(?:ping|health|status|metrics|debug|trace|dump|env)[a-zA-Z0-9_.\-\/]*)['"]/gi);
+                        return hidden ? Array.from(new Set(hidden.map(h => h.replace(/['"]/g, '')))) : [];
+                    }
+                },
+                {
+                    title: "UPLOAD / DOWNLOAD ENDPOINTS",
+                    theme: "theme-apis",
+                    getItems: (code) => {
+                        const ud = code.match(/['"](\/(?:upload|download|export|import|file|asset)[a-zA-Z0-9_.\-\/]*)['"]/gi);
+                        return ud ? Array.from(new Set(ud.map(u => u.replace(/['"]/g, '')))) : [];
+                    }
+                },
+
+                {
+                    title: "HARDCODED SECRETS / TOKENS",
+                    theme: "theme-secrets",
+                    getItems: (code) => {
+                        const secrets = new Set();
+                        let match;
+                        let regex = /(?:api[_-]?key|api[_-]?token|secret|password|bearer|auth[_-]?token|access[_-]?token|client[_-]?secret)['"]?\s*[:=]\s*['"]?([a-zA-Z0-9\-_+/=]{10,})['"]?/gi;
+                        while ((match = regex.exec(code)) !== null) secrets.add(match[1]);
+
+                        const jwts = code.match(/ey[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}/g);
+                        if (jwts) jwts.forEach(j => secrets.add(j));
+
+                        if (code.includes("BEGIN RSA PRIVATE KEY") || code.includes("BEGIN PRIVATE KEY")) secrets.add("Found Private Key PEM Block");
+
+                        return Array.from(secrets);
+                    }
+                },
+                {
+                    title: "AWS / FIREBASE / CLOUD",
+                    theme: "theme-clouds",
+                    getItems: (code) => {
+                        const clouds = new Set();
+                        const akias = code.match(/AKIA[0-9A-Z]{16}/g);
+                        if (akias) akias.forEach(a => clouds.add(`AWS Key: ${a}`));
+
+                        const urls = code.match(/[a-zA-Z0-9.-]+\.(?:s3[a-zA-Z0-9.-]*\.amazonaws\.com|cloudfront\.net|firebaseio\.com)/g);
+                        if (urls) urls.forEach(u => clouds.add(u));
+
+                        const cdn = code.match(/https?:\/\/(?:cdn\.|[a-zA-Z0-9.-]*cdn[a-zA-Z0-9.-]*\.)[a-zA-Z0-9.-]+/g);
+                        if (cdn) cdn.forEach(c => clouds.add(c));
+
+                        return Array.from(clouds);
+                    }
+                },
+                {
+                    title: "3RD PARTY INTEGRATIONS",
+                    theme: "theme-integrations",
+                    getItems: (code) => {
+                        const integrations = code.match(/https?:\/\/(?:api\.)?(stripe|paypal|twilio|sendgrid|mailgun|slack|discord|github|gitlab|bitbucket)\.com[^\s"'<>]*/gi);
+                        return integrations ? Array.from(new Set(integrations)) : [];
+                    }
+                },
+                {
+                    title: "AUTHORIZATION HEADERS",
+                    theme: "theme-headers",
+                    getItems: (code) => {
+                        const headers = new Set();
+                        let match;
+                        const regex = /['"](?:Authorization|Bearer|Token|X-[a-zA-Z0-9-]+)['"]\s*:\s*['"]([^"']+)['"]/gi;
+                        while ((match = regex.exec(code)) !== null) headers.add(match[0].replace(/['"]/g, ''));
+                        return Array.from(headers);
+                    }
+                },
+
+                {
+                    title: "ENVIRONMENT VARIABLES",
+                    theme: "theme-configs",
+                    getItems: (code) => {
+                        const envs = code.match(/process\.env\.[a-zA-Z0-9_]+/g);
+                        return envs ? Array.from(new Set(envs)) : [];
+                    }
+                },
+                {
+                    title: "FEATURE FLAGS & ROLES",
+                    theme: "theme-configs",
+                    getItems: (code) => {
+                        const features = new Set();
+                        let match;
+                        const regex = /(?:is|enable|disable|use)[A-Z][a-zA-Z0-9]+(?:\s*=\s*(?:true|false))?/g;
+                        while ((match = regex.exec(code)) !== null) if (!match[0].includes("function")) features.add(match[0]);
+
+                        const roles = code.match(/['"](?:admin|superuser|manager|root|staff)['"]/gi);
+                        if (roles) roles.forEach(r => features.add(`Role: ${r}`));
+                        return Array.from(features);
+                    }
+                },
+                {
+                    title: "HIDDEN & DEBUG PARAMETERS",
+                    theme: "theme-debug",
+                    getItems: (code) => {
+                        const params = code.match(/[\?&](?:debug|test|dev|bypass|admin|force)=[^&"'\s]+/gi);
+                        return params ? Array.from(new Set(params)) : [];
+                    }
+                },
+                {
+                    title: "SOURCE MAPS / BACKUPS",
+                    theme: "theme-hidden",
+                    getItems: (code) => {
+                        const files = code.match(/[a-zA-Z0-9_.-]+\.(?:map|bak|old|sql|tar|gz|zip)/g);
+                        return files ? Array.from(new Set(files)) : [];
+                    }
+                },
+                {
+                    title: "CORS MAPS & ERRORS",
+                    theme: "theme-configs",
+                    getItems: (code) => {
+                        const cors = new Set();
+                        const cMatches = code.match(/Access-Control-Allow-(?:Origin|Headers|Methods)[^"'\n]*/gi);
+                        if (cMatches) cMatches.forEach(c => cors.add(c));
+
+                        const eMatches = code.match(/console\.(?:error|warn|debug)\(['"]([^'"]+)['"]/gi);
+                        if (eMatches) eMatches.forEach(e => cors.add(e.substring(0, 50) + "...")); // Truncated logs
+
+                        return Array.from(cors);
+                    }
+                }
+            ];
+
+            extractors.forEach(ext => {
+                const results = ext.getItems(code);
+
+                if (results.length > 0) {
+                    totalCount += results.length;
+
+                    const section = document.createElement("div");
+                    section.className = "enum-section";
+
+                    const title = document.createElement("div");
+                    title.className = `enum-title ${ext.theme}`;
+                    title.innerHTML = `<span>${ext.title}</span><span class="badge">${results.length}</span>`;
+                    section.appendChild(title);
+
+                    const list = document.createElement("ul");
+                    list.className = "enum-list";
+
+                    results.forEach(item => {
+                        const li = document.createElement("li");
+                        li.className = "enum-item";
+                        li.innerText = item;
+                        li.onclick = () => highlightMatch(item, ext.title);
+                        li.title = "Click to highlight in editor";
+                        list.appendChild(li);
+                    });
+
+                    section.appendChild(list);
+                    enumContent.appendChild(section);
+                }
+            });
+
+            document.getElementById("total-count").innerText = totalCount;
+
+            if (totalCount === 0) {
+                enumContent.innerHTML = '<div style="padding: 20px; text-align: center; color: #8b949e; font-size: 13px;">No endpoints or secrets found.</div>';
+            }
+        }
+
+        setTimeout(extractInfo, 500);
+
+        // ---- AI Model Definitions ----
+        // The model list is fetched LIVE from OpenRouter (public endpoint, no key needed),
+        // because free / experimental model IDs are retired and rotated constantly.
+        // FALLBACK_MODELS is only used if that request fails (offline, blocked, etc).
+        const OR_MODELS_URL = 'https://openrouter.ai/api/v1/models';
+        const MODELS_CACHE_KEY = 'or-models-cache-v3';
+        const MODELS_TTL_MS = 6 * 60 * 60 * 1000; // 6 hours
+        const FREE_ROUTER = 'openrouter/free';
+        const DEFAULT_MODEL = FREE_ROUTER;
+
+        const PINNED_MODELS = [
+            { id: 'openrouter/free', name: 'Free Models Router', provider: 'OpenRouter', free: true,  pinned: true },
+            { id: 'openrouter/auto', name: 'Auto Router (best pick)', provider: 'OpenRouter', free: false, pinned: true },
+        ];
+
+        // Offline shortlist (only used if the live list can't be loaded at all).
+        const FALLBACK_MODELS = PINNED_MODELS.concat([
+            { id: 'google/gemini-2.5-flash',              name: 'Gemini 2.5 Flash',       provider: 'Google',    free: false },
+            { id: 'google/gemini-2.5-pro',                name: 'Gemini 2.5 Pro',         provider: 'Google',    free: false },
+            { id: 'deepseek/deepseek-chat',               name: 'DeepSeek V3',            provider: 'DeepSeek',  free: false },
+            { id: 'deepseek/deepseek-r1',                 name: 'DeepSeek R1',            provider: 'DeepSeek',  free: false },
+            { id: 'meta-llama/llama-3.3-70b-instruct:free', name: 'Llama 3.3 70B',        provider: 'Meta',      free: true  },
+            { id: 'mistralai/mistral-small-3.1-24b-instruct', name: 'Mistral Small 3.1',  provider: 'Mistral',   free: false },
+            { id: 'anthropic/claude-3.5-haiku',           name: 'Claude 3.5 Haiku',       provider: 'Anthropic', free: false },
+            { id: 'anthropic/claude-haiku-4.5',           name: 'Claude Haiku 4.5',       provider: 'Anthropic', free: false },
+            { id: 'openai/gpt-4o-mini',                   name: 'GPT-4o mini',            provider: 'OpenAI',    free: false },
+            { id: 'openai/gpt-oss-120b:free',             name: 'GPT-OSS 120B',           provider: 'OpenAI',    free: true  },
+            { id: 'qwen/qwen3-coder:free',                name: 'Qwen3 Coder',            provider: 'Alibaba',   free: true  },
+        ]);
+
+        // "Featured" grid = one multi-provider shortlist (like the old hardcoded grid),
+        // but each slot is RESOLVED against the live list, so it always points at a model
+        // that really exists today. preferFree: pick the :free variant if one exists.
+        const FEATURED_SLOTS = [
+            { id: 'openrouter/free' },
+            { id: 'openrouter/auto' },
+            { match: /^google\/gemini-[\d.]+-flash(?!.*(image|tts|live|lite|audio))/ },
+            { match: /^google\/gemini-[\d.]+-pro(?!.*(image|tts|live|audio))/ },
+            { match: /^google\/gemma-/, preferFree: true },
+            { match: /^deepseek\/deepseek-(chat|v\d)/ },
+            { match: /^deepseek\/deepseek-(r1|reasoner)/ },
+            { match: /^meta-llama\/llama-4-/, preferFree: true },
+            { match: /^meta-llama\/llama-3\.3-70b/, preferFree: true },
+            { match: /^mistralai\/mistral-(small|medium)/ },
+            { match: /^mistralai\/mistral-large/ },
+            { match: /^anthropic\/claude-.*haiku/ },
+            { match: /^anthropic\/claude-.*sonnet/ },
+            { match: /^openai\/gpt-[\d.]+-mini/ },
+            { match: /^openai\/gpt-oss-/, preferFree: true },
+            { match: /^qwen\/(?!.*(vl|image|embed|guard))/, preferFree: true },
+            { match: /^nvidia\/.*nemotron/, preferFree: true },
+            { match: /^microsoft\/phi/ },
+            { match: /^x-ai\/grok-/ },
+        ];
+
+        function buildFeatured() {
+            const out = [], seen = new Set();
+            const add = m => { if (m && !seen.has(m.id)) { seen.add(m.id); out.push(m); } };
+            for (const slot of FEATURED_SLOTS) {
+                if (slot.id) { add(findModel(slot.id) || PINNED_MODELS.find(m => m.id === slot.id)); continue; }
+                let c = OR_MODELS.filter(m => !m.pinned && slot.match.test(m.id));
+                if (slot.preferFree && c.some(m => m.free)) c = c.filter(m => m.free);
+                if (!c.length) continue;
+                c.sort((a, b) => (b.created || 0) - (a.created || 0));
+                add(c[0]);
+            }
+            // offline / no-match safety net: never show an empty "Featured" tab
+            return out.length > 2 ? out : OR_MODELS.slice(0, 20);
+        }
+
+        let OR_MODELS = FALLBACK_MODELS.slice();
+        let modelsSource = 'fallback';   // 'live' | 'cache' | 'fallback'
+        let pendingModel = DEFAULT_MODEL; // selection inside the settings panel
+        let modelFilter = 'featured';
+        let modelQuery = '';
+        let modelsPromise = null;
+
+        function esc(str) {
+            return String(str ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+        }
+
+        function parseModels(json) {
+            const list = Array.isArray(json?.data) ? json.data : [];
+            const out = [];
+            for (const m of list) {
+                if (!m || !m.id) continue;
+                const outMods = m.architecture?.output_modalities;
+                const inMods = m.architecture?.input_modalities;
+                if (Array.isArray(outMods) && !outMods.includes('text')) continue; // skip image/embedding-only models
+                if (Array.isArray(inMods) && !inMods.includes('text')) continue;
+                const pp = parseFloat(m.pricing?.prompt);
+                const pc = parseFloat(m.pricing?.completion);
+                const free = pp === 0 && pc === 0;
+                let provider = m.id.split('/')[0];
+                let name = m.name || m.id;
+                const ci = name.indexOf(':');
+                if (ci > 0 && ci < 30) { provider = name.slice(0, ci).trim(); name = name.slice(ci + 1).trim(); }
+                name = name.replace(/\s*\(free\)\s*$/i, '');           // the FREE badge already says it
+                if (name.length < 6) name = provider + ' ' + name;          // e.g. "R1" -> "DeepSeek R1"
+                out.push({ id: m.id, name, provider, free, ctx: m.context_length || 0, created: m.created || 0 });
+            }
+            // free first, then newest first
+            out.sort((a, b) => (b.free - a.free) || (b.created - a.created) || a.name.localeCompare(b.name));
+            // make sure the routers are always pinned at the top
+            const rest = out.filter(m => !PINNED_MODELS.some(p => p.id === m.id));
+            return PINNED_MODELS.concat(rest);
+        }
+
+        function setModelStatus(text, warn) {
+            const box = document.getElementById('model-load-status');
+            const t = document.getElementById('model-load-text');
+            if (t) t.textContent = text;
+            if (box) box.classList.toggle('warn', !!warn);
+        }
+
+        function loadModels(force) {
+            if (modelsPromise && !force) return modelsPromise;
+            modelsPromise = (async () => {
+                // 1) fresh cache
+                if (!force) {
+                    try {
+                        const c = JSON.parse(localStorage.getItem(MODELS_CACHE_KEY) || 'null');
+                        if (c && Array.isArray(c.models) && c.models.length > 5 && Date.now() - c.ts < MODELS_TTL_MS) {
+                            OR_MODELS = c.models; modelsSource = 'cache';
+                            setModelStatus(`${OR_MODELS.length} models · cached (${OR_MODELS.filter(m => m.free).length} free)`);
+                            afterModelsLoaded();
+                            return OR_MODELS;
+                        }
+                    } catch (e) { /* ignore bad cache */ }
+                }
+                // 2) live fetch
+                setModelStatus('Loading live model list…');
+                try {
+                    const ctrl = new AbortController();
+                    const timer = setTimeout(() => ctrl.abort(), 15000);
+                    const res = await fetch(OR_MODELS_URL, { signal: ctrl.signal });
+                    clearTimeout(timer);
+                    if (!res.ok) throw new Error('HTTP ' + res.status);
+                    const models = parseModels(await res.json());
+                    if (models.length < 5) throw new Error('empty model list');
+                    OR_MODELS = models; modelsSource = 'live';
+                    try { localStorage.setItem(MODELS_CACHE_KEY, JSON.stringify({ ts: Date.now(), models })); } catch (e) {}
+                    setModelStatus(`${models.length} models live from OpenRouter (${models.filter(m => m.free).length} free)`);
+                } catch (err) {
+                    // stale cache is still better than the tiny built-in list
+                    try {
+                        const c = JSON.parse(localStorage.getItem(MODELS_CACHE_KEY) || 'null');
+                        if (c && Array.isArray(c.models) && c.models.length > 5) {
+                            OR_MODELS = c.models; modelsSource = 'cache';
+                            setModelStatus('Could not reach OpenRouter — showing last saved list (' + OR_MODELS.length + ')', true);
+                            afterModelsLoaded();
+                            return OR_MODELS;
+                        }
+                    } catch (e) {}
+                    OR_MODELS = FALLBACK_MODELS.slice(); modelsSource = 'fallback';
+                    setModelStatus('Could not load live list (' + err.message + ') — using built-in shortlist', true);
+                }
+                afterModelsLoaded();
+                return OR_MODELS;
+            })();
+            return modelsPromise;
+        }
+
+        // Runs after every model-list load: migrate retired models, refresh UI bits.
+        function afterModelsLoaded() {
+            const saved = localStorage.getItem('or-model');
+            if (saved && modelsSource !== 'fallback' && !OR_MODELS.some(m => m.id === saved)) {
+                // The saved model no longer exists on OpenRouter -> move to the free router
+                localStorage.setItem('or-model', DEFAULT_MODEL);
+                if (pendingModel === saved) pendingModel = DEFAULT_MODEL;
+                window.__modelMigratedFrom = saved;
+            }
+            refreshActiveModelLabel();
+            if (document.getElementById('settings-overlay').classList.contains('open')) renderModelGrid();
+        }
+
+        function findModel(id) { return OR_MODELS.find(m => m.id === id); }
+
+        function refreshActiveModelLabel() {
+            const id = localStorage.getItem('or-model') || DEFAULT_MODEL;
+            const m = findModel(id);
+            const n = document.getElementById('active-model-name');
+            const pr = document.getElementById('active-model-provider');
+            if (n) n.textContent = m ? m.name : id.split('/').pop();
+            if (pr) pr.textContent = m ? m.provider : '';
+        }
+
+        // ---- API key: enter once, stays saved ----
+        function getApiKey() {
+            try { return localStorage.getItem('or-api-key') || ''; } catch (e) { return window.__memKey || ''; }
+        }
+        function setApiKey(k) {
+            window.__memKey = k;
+            try { localStorage.setItem('or-api-key', k); } catch (e) { return false; }
+            try { navigator.storage?.persist?.(); } catch (e) {}   // ask the browser not to evict it
+            return true;
+        }
+        function clearApiKey() {
+            window.__memKey = '';
+            try { localStorage.removeItem('or-api-key'); } catch (e) {}
+        }
+        function maskKey(k) {
+            return k.length <= 14 ? '••••••••••••' : k.slice(0, 9) + '••••••••••••' + k.slice(-4);
+        }
+        // editing=false -> show "✓ SAVED + Change" when a key exists; true -> show the empty input
+        function renderKeyField(editing) {
+            const saved = getApiKey();
+            const showSaved = !!saved && !editing;
+            document.getElementById('key-saved').style.display = showSaved ? 'flex' : 'none';
+            document.getElementById('key-edit').style.display = showSaved ? 'none' : 'block';
+            document.getElementById('key-cancel').style.display = (saved && editing) ? 'block' : 'none';
+            document.getElementById('key-saved-mask').textContent = saved ? maskKey(saved) : '';
+            const inp = document.getElementById('or-api-key');
+            inp.value = ''; inp.type = 'password';
+            if (editing) inp.focus();
+        }
+        function editKey() { renderKeyField(true); }
+        function removeKey() {
+            if (!confirm('Remove the saved API key from this browser?')) return;
+            clearApiKey();
+            renderKeyField(false);
+            renderAIPanel();
+        }
+
+        // ---- Settings ----
+        function openSettings() {
+            document.getElementById('settings-overlay').classList.add('open');
+            renderKeyField(false);
+            document.getElementById('fetch-proxy').value = getSavedProxy();
+            fillUAOptions(); document.getElementById('ua-mode').value = getUAMode();
+            document.getElementById('proxy-list').value = getProxyTemplates().join('\n');
+            document.getElementById('or-fallback').checked = localStorage.getItem('or-fallback') !== '0';
+            pendingModel = localStorage.getItem('or-model') || DEFAULT_MODEL;
+            modelQuery = ''; modelFilter = 'featured';
+            document.getElementById('model-search').value = '';
+            document.querySelectorAll('.model-chip').forEach(c => c.classList.toggle('active', c.dataset.filter === 'featured'));
+            document.getElementById('settings-status').textContent = '';
+            renderModelGrid();
+            loadModels(false);
+        }
+
+        function renderModelGrid() {
+            const grid = document.getElementById('model-grid');
+            const q = modelQuery.trim().toLowerCase();
+            // Featured tab = curated multi-provider grid; typing in search searches ALL models.
+            const base = (modelFilter === 'featured' && !q) ? buildFeatured() : OR_MODELS;
+            let list = base.filter(m =>
+                (modelFilter === 'all' || modelFilter === 'featured' || (modelFilter === 'free') === m.free) &&
+                (!q || (m.name + ' ' + m.provider + ' ' + m.id).toLowerCase().includes(q))
+            );
+            // keep the current selection visible even if it is not in the current view
+            if (!list.some(m => m.id === pendingModel) && !q && (modelFilter === 'all' || modelFilter === 'featured')) {
+                const cur = findModel(pendingModel) ||
+                    { id: pendingModel, name: pendingModel.split('/').pop(), provider: 'custom', free: /:free$/.test(pendingModel) };
+                list = [cur].concat(list);
+            }
+            const MAX = 250;
+            const shown = list.slice(0, MAX);
+            if (!shown.length) {
+                grid.innerHTML = '<div class="model-empty">No models match. Tip: type a full model ID (e.g. provider/model) and press Enter to use it.</div>';
+            } else {
+                grid.innerHTML = shown.map(m => `
+                    <div class="model-card ${m.id === pendingModel ? 'selected' : ''}" data-model-id="${esc(m.id)}" title="${esc(m.id)}">
+                        <div class="model-card-name">
+                            <span>${esc(m.name)}</span>
+                            <span class="${m.free ? 'model-badge-free' : 'model-badge-paid'}">${m.free ? 'FREE' : 'PAID'}</span>
+                        </div>
+                        <div class="model-card-provider">${esc(m.provider)}${m.ctx ? ' · ' + Math.round(m.ctx / 1000) + 'K ctx' : ''}</div>
+                        <div class="model-card-check">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>
+                        </div>
+                    </div>`).join('') +
+                    (list.length > MAX ? `<div class="model-empty">Showing ${MAX} of ${list.length} — use search to narrow down.</div>` : '');
+            }
+        }
+
+        function selectModel(id) {
+            pendingModel = id;
+            document.querySelectorAll('.model-card').forEach(c => c.classList.toggle('selected', c.dataset.modelId === id));
+        }
+
+        function getSelectedModel() { return pendingModel || DEFAULT_MODEL; }
+
+        // search / filter / card click wiring
+        document.getElementById('model-search').addEventListener('input', e => {
+            modelQuery = e.target.value;
+            renderModelGrid();
+        });
+        document.getElementById('model-search').addEventListener('keydown', e => {
+            // Enter on a full custom model id (contains '/') selects it directly
+            if (e.key === 'Enter') {
+                const v = e.target.value.trim();
+                if (v.includes('/') && !OR_MODELS.some(m => m.id === v)) { selectModel(v); pendingModel = v; renderModelGrid(); }
+            }
+        });
+        document.querySelectorAll('.model-chip').forEach(btn => btn.addEventListener('click', () => {
+            modelFilter = btn.dataset.filter;
+            document.querySelectorAll('.model-chip').forEach(c => c.classList.toggle('active', c === btn));
+            renderModelGrid();
+        }));
+        document.getElementById('model-grid').addEventListener('click', e => {
+            const card = e.target.closest('.model-card');
+            if (card) selectModel(card.dataset.modelId);
+        });
+
+        function toggleKeyVisibility() {
+            const inp = document.getElementById('or-api-key');
+            inp.type = inp.type === 'password' ? 'text' : 'password';
+        }
+
+        function closeSettings() {
+            document.getElementById('settings-overlay').classList.remove('open');
+        }
+
+        function closeSettingsOnOverlay(e) {
+            if (e.target === document.getElementById('settings-overlay')) closeSettings();
+        }
+
+        function saveSettings() {
+            // A key is only replaced when the user typed a NEW one; otherwise the saved key is kept.
+            const typed = document.getElementById('or-api-key').value.trim();
+            const status = document.getElementById('settings-status');
+            let msg = '✓ Saved successfully', delay = 900;
+            if (typed) {
+                if (!setApiKey(typed)) { msg = '⚠ Browser blocked storage — key is kept for this tab only'; delay = 2600; }
+                else if (!/^sk-or-/.test(typed)) { msg = '⚠ Saved, but this doesn\'t look like an OpenRouter key (sk-or-v1-…)'; delay = 2600; }
+            }
+            try {
+                localStorage.setItem('js-proxy', document.getElementById('fetch-proxy').value.trim());
+                localStorage.setItem('js-ua', document.getElementById('ua-mode').value);
+                const listTxt = document.getElementById('proxy-list').value.trim();
+                // store only when it differs from the defaults, so future default updates still apply
+                if (listTxt === DEFAULT_PROXIES.join('\n')) localStorage.removeItem('js-proxies');
+                else localStorage.setItem('js-proxies', listTxt);
+                localStorage.setItem('or-model', getSelectedModel());
+                localStorage.setItem('or-fallback', document.getElementById('or-fallback').checked ? '1' : '0');
+            } catch (e) {}
+            status.textContent = msg;
+            renderKeyField(false);
+            setTimeout(() => {
+                status.textContent = '';
+                closeSettings();
+                renderAIPanel();
+            }, delay);
+        }
+
+        // load the live list in the background at startup
+        loadModels(false);
+
+        // ---- Tabs ----
+        function switchTab(name) {
+            document.querySelectorAll('.sidebar-tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
+            document.getElementById('tab-' + name).classList.add('active');
+            document.getElementById('pane-' + name).classList.add('active');
+            if (name === 'ai') renderAIPanel();
+        }
+
+        // ---- AI Panel ----
+        const AI_PROMPTS = [
+            {
+                icon: '⚡',
+                title: 'Triage Secrets',
+                desc: 'Rate severity of exposed keys & tokens',
+                prompt: 'You are a security researcher. From the extracted data below, identify all hardcoded secrets, tokens, API keys, and credentials. Rate each as Critical/High/Medium. Be concise and use a short table format.\n\nExtracted data:\n'
+            },
+            {
+                icon: '🎯',
+                title: 'Attack Surface',
+                desc: 'Endpoints worth probing for vulnerabilities',
+                prompt: 'You are a bug bounty hunter. Analyze the extracted endpoints and URLs below. List the most interesting ones to probe for IDOR, auth bypass, or injection. Format as a short prioritized list.\n\nExtracted data:\n'
+            },
+            {
+                icon: '☁',
+                title: 'Cloud Exposure',
+                desc: 'Misconfigured S3, Firebase, CDN assets',
+                prompt: 'You are a cloud security expert. From the extracted data below, identify any cloud infrastructure (S3 buckets, Firebase URLs, CloudFront) that could be misconfigured or publicly accessible. Be concise.\n\nExtracted data:\n'
+            },
+            {
+                icon: '🔑',
+                title: 'Auth Analysis',
+                desc: 'OAuth flows, JWT tokens & auth patterns',
+                prompt: 'You are an authentication security expert. Analyze the extracted data for OAuth flows, JWT tokens, session management issues, and authentication weaknesses. Be concise and specific.\n\nExtracted data:\n'
+            },
+            {
+                icon: '🌐',
+                title: 'API Mapping',
+                desc: 'Full map of discovered API endpoints',
+                prompt: 'You are an API security expert. From the extracted endpoints, routes, and URLs, create a structured API map. Group by function (auth, data, admin) and flag any suspicious patterns. Be concise.\n\nExtracted data:\n'
+            },
+            {
+                icon: '📊',
+                title: 'Risk Report',
+                desc: 'Executive risk summary for stakeholders',
+                prompt: 'Write a concise executive summary (5-8 sentences) of the security findings from the extracted JavaScript analysis data below. No jargon. Focus on business risk and remediation priority.\n\nExtracted data:\n'
+            }
+        ];
+
+        function getExtractedText() {
+            const sections = document.querySelectorAll('#enum-content .enum-section');
+            if (!sections.length) return null;
+            let lines = [];
+            sections.forEach(sec => {
+                const title = sec.querySelector('.enum-title span')?.innerText || '';
+                const items = Array.from(sec.querySelectorAll('.enum-item')).map(i => i.innerText);
+                if (items.length) {
+                    lines.push('\n[' + title + ']');
+                    items.forEach(i => lines.push('  ' + i));
+                }
+            });
+            return lines.join('\n');
+        }
+
+        function renderAIPanel() {
+            const panel = document.getElementById('ai-panel-inner');
+            const apiKey = getApiKey();
+            const modelId = localStorage.getItem('or-model') || DEFAULT_MODEL;
+            const modelObj = findModel(modelId);
+            const modelName = esc(modelObj ? modelObj.name : modelId.split('/').pop());
+            const modelProvider = esc(modelObj ? modelObj.provider : '');
+            const migrated = window.__modelMigratedFrom;
+            window.__modelMigratedFrom = null;
+
+            if (!apiKey) {
+                panel.innerHTML = `
+                    <div class="ai-no-key">
+                        <div style="font-size:32px;margin-bottom:14px;opacity:0.6;">⬡</div>
+                        <div style="font-family:'Orbitron',monospace;font-size:11px;letter-spacing:1.5px;color:var(--text-dim);margin-bottom:8px;">NO API KEY CONFIGURED</div>
+                        <div style="font-size:12px;line-height:1.6;">Add your OpenRouter key in <span onclick="openSettings()" style="color:var(--primary);cursor:pointer;text-decoration:underline;">Settings</span> to enable AI analysis.</div>
+                        <div style="margin-top:14px;font-size:11px;color:var(--text-dim);">Free models available — no credit card required.</div>
+                    </div>`;
+                return;
+            }
+
+            const extracted = getExtractedText();
+            const noData = !extracted;
+
+            panel.innerHTML = `
+                <div class="ai-active-model">
+                    <div class="ai-active-model-dot"></div>
+                    <div class="ai-active-model-info">
+                        <span class="ai-active-model-name" id="active-model-name">${modelName}</span>
+                        <span class="ai-active-model-provider" id="active-model-provider">${modelProvider}</span>
+                    </div>
+                    <button class="ai-change-model-btn" onclick="openSettings()">Change</button>
+                </div>
+                ${migrated ? `<div class="ai-nodata-msg">⚠ Your saved model <b>${esc(migrated)}</b> was retired by OpenRouter — switched to the Free Models Router.</div>` : ''}
+                ${noData ? '<div class="ai-nodata-msg">⬡ Beautify code first to enable AI analysis</div>' : ''}
+                <div class="ai-model-label">Quick Analysis</div>
+                <div class="ai-prompt-select" id="ai-prompts">
+                    ${AI_PROMPTS.map((p, i) => `
+                    <button class="ai-prompt-btn ${noData ? 'ai-disabled' : ''}" ${noData ? 'disabled' : ''} onclick="runAIPrompt(${i})">
+                        <span class="prompt-icon">${p.icon}</span>
+                        <span class="prompt-text">
+                            <div class="prompt-title">${p.title}</div>
+                            <div class="prompt-desc">${p.desc}</div>
+                        </span>
+                        <span class="prompt-arrow">›</span>
+                    </button>`).join('')}
+                </div>
+                <div class="ai-divider"></div>
+                <div class="ai-model-label">Custom Query</div>
+                <div class="ai-custom-input">
+                    <input type="text" id="ai-custom-text" placeholder="Ask anything about this JS file…" ${noData ? 'disabled' : ''}>
+                    <button class="ai-send-btn" onclick="runCustomPrompt()" ${noData ? 'disabled' : ''}>⏎</button>
+                </div>
+                <div class="ai-response-wrap">
+                    <div class="ai-tools" id="ai-tools">
+                        <span class="ai-tools-title" id="ai-tools-title">Report</span>
+                        <button class="ai-tool-btn" onclick="copyAIReport(this)" title="Copy report as Markdown">⧉ Copy</button>
+                        <button class="ai-tool-btn primary" onclick="openAIFullscreen()" title="Open the report full screen">⛶ Fullscreen</button>
+                    </div>
+                    <div class="ai-response-box empty" id="ai-response">
+                        <div style="text-align:center;opacity:0.5;">
+                            <div style="font-size:22px;margin-bottom:8px;">⬡</div>
+                            <div style="font-size:11px;font-family:'Orbitron',monospace;letter-spacing:1px;">AWAITING QUERY</div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            if (window.__lastAI) showAIReport(window.__lastAI);   // restore last report after tab switches
+
+            document.getElementById('ai-custom-text')?.addEventListener('keydown', e => {
+                if (e.key === 'Enter') runCustomPrompt();
+            });
+        }
+
+        // ---------- Markdown -> colorful report ----------
+        function mdInline(raw) {
+            let t = esc(raw);
+            const codes = [];
+            t = t.replace(/`([^`]+)`/g, (_, c) => { codes.push(c); return '\u0000' + (codes.length - 1) + '\u0000'; });
+            t = t.replace(/\*\*([^*]+?)\*\*/g, '<strong>$1</strong>')
+                 .replace(/__([^_]+?)__/g, '<strong>$1</strong>')
+                 .replace(/(^|[^*\w])\*([^*\s][^*]*?)\*(?![*\w])/g, '$1<em>$2</em>')
+                 .replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>');
+            // severity words that are emphasised, e.g. **Critical** or [High]
+            t = t.replace(/<strong>\s*(Critical|High|Medium|Low|Info(?:rmational)?)\s*<\/strong>/gi, (m, w) => sevBadge(w))
+                 .replace(/\[(Critical|High|Medium|Low|Info(?:rmational)?)\]/g, (m, w) => sevBadge(w));
+            return t.replace(/\u0000(\d+)\u0000/g, (_, i) => '<code>' + codes[+i] + '</code>');
+        }
+
+        function sevBadge(word) {
+            const k = word.toLowerCase().startsWith('info') ? 'info' : word.toLowerCase();
+            return `<span class="sev sev-${k}">${word}</span>`;
+        }
+
+        function mdCell(raw, colIdx) {
+            const plain = raw.replace(/[*_`]/g, '').trim();
+            if (colIdx === 0 && /^#?\d{1,3}$/.test(plain)) return `<span class="md-rank">${esc(plain.replace('#', ''))}</span>`;
+            let html = mdInline(raw.trim());
+            // a cell that STARTS with a severity word (e.g. "Critical – exposed key") gets a badge
+            html = html.replace(/^(Critical|High|Medium|Low|Info(?:rmational)?)(?=\b)/i, (m) => sevBadge(m));
+            return html;
+        }
+
+        function renderMarkdownBody(src) {
+            const lines = String(src || '').replace(/\r\n?/g, '\n').split('\n');
+            const splitRow = l => l.trim().replace(/^\|/, '').replace(/\|$/, '').split('|');
+            const isSep = l => /^\s*\|?\s*:?-{2,}:?\s*(\|\s*:?-{2,}:?\s*)*\|?\s*$/.test(l) && l.includes('-');
+            const listRe = /^(\s*)([-*+]|\d+[.)])\s+(.*)$/;
+            const isBlockStart = l => /^```/.test(l.trim()) || /^#{1,6}\s/.test(l) || listRe.test(l) || /^\s*>/.test(l) ||
+                /^\s*([-*_])\1{2,}\s*$/.test(l) || (l.includes('|') && false);
+            let html = '', i = 0;
+            while (i < lines.length) {
+                const line = lines[i];
+                if (!line.trim()) { i++; continue; }
+
+                if (/^```/.test(line.trim())) {                       // fenced code
+                    const buf = []; i++;
+                    while (i < lines.length && !/^```/.test(lines[i].trim())) buf.push(lines[i++]);
+                    i++;
+                    html += `<pre><code>${esc(buf.join('\n'))}</code></pre>`; continue;
+                }
+                if (/^\s*([-*_])\1{2,}\s*$/.test(line)) { html += '<hr>'; i++; continue; }
+
+                let m = line.match(/^(#{1,6})\s+(.*?)\s*#*\s*$/);      // heading
+                if (m) { const n = m[1].length; html += `<h${n}>${mdInline(m[2])}</h${n}>`; i++; continue; }
+
+                if (line.includes('|') && i + 1 < lines.length && isSep(lines[i + 1])) {   // table
+                    const head = splitRow(line); i += 2;
+                    const rows = [];
+                    while (i < lines.length && lines[i].trim() && lines[i].includes('|')) rows.push(splitRow(lines[i++]));
+                    html += '<div class="md-table-wrap"><table><thead><tr>' + head.map(c => `<th>${mdInline(c.trim())}</th>`).join('') +
+                        '</tr></thead><tbody>' +
+                        rows.map(r => '<tr>' + head.map((_, ci) => `<td>${mdCell(r[ci] ?? '', ci)}</td>`).join('') + '</tr>').join('') +
+                        '</tbody></table></div>';
+                    continue;
+                }
+
+                if (/^\s*>/.test(line)) {                               // blockquote
+                    const buf = [];
+                    while (i < lines.length && /^\s*>/.test(lines[i])) buf.push(lines[i++].replace(/^\s*>\s?/, ''));
+                    html += `<blockquote>${buf.map(b => `<p>${mdInline(b)}</p>`).join('')}</blockquote>`; continue;
+                }
+
+                m = line.match(listRe);                                 // lists
+                if (m) {
+                    const ordered = /\d/.test(m[2]);
+                    const items = [];
+                    while (i < lines.length && (m = lines[i].match(listRe)) && (/\d/.test(m[2]) === ordered || m[1].length > 0)) {
+                        const lvl = Math.min(2, Math.floor(m[1].replace(/\t/g, '  ').length / 2));
+                        items.push({ lvl, n: parseInt(m[2], 10) || items.length + 1, text: m[3] });
+                        i++;
+                    }
+                    const tag = ordered ? 'ol' : 'ul';
+                    html += `<${tag}>` + items.map(it => `<li class="lv${it.lvl}" data-n="${it.n}">${mdInline(it.text)}</li>`).join('') + `</${tag}>`;
+                    continue;
+                }
+
+                const buf = [];                                          // paragraph
+                while (i < lines.length && lines[i].trim() && !isBlockStart(lines[i]) &&
+                       !(lines[i].includes('|') && i + 1 < lines.length && isSep(lines[i + 1]))) buf.push(lines[i++]);
+                if (!buf.length) { buf.push(lines[i++]); }
+                html += `<p>${buf.map(mdInline).join('<br>')}</p>`;
+            }
+            return html;
+        }
+
+        function renderReportHTML(src) {
+            const body = renderMarkdownBody(src);
+            // severity summary strip
+            const tmp = document.createElement('div'); tmp.innerHTML = body;
+            const counts = {};
+            tmp.querySelectorAll('.sev').forEach(el => { const k = el.className.match(/sev-(\w+)/)[1]; counts[k] = (counts[k] || 0) + 1; });
+            const order = ['critical', 'high', 'medium', 'low', 'info'];
+            const chips = order.filter(k => counts[k]).map(k => `<span class="sev sev-${k}"><b>${counts[k]}</b>${k}</span>`).join('');
+            const summary = chips ? `<div class="md-summary"><span class="lbl">Findings</span>${chips}</div>` : '';
+            return `<div class="md-report">${summary}${body}</div>`;
+        }
+
+        // ---------- show / fullscreen / export ----------
+        function showAIReport(r) {
+            const box = document.getElementById('ai-response');
+            if (!box) return;
+            box.className = 'ai-response-box md';
+            box.innerHTML = renderReportHTML(r.text);
+            if (r.servedBy) {
+                const note = document.createElement('div');
+                note.className = 'ai-served-by';
+                note.textContent = `⚡ Answered by ${r.servedBy} (your selected model was unavailable)`;
+                box.appendChild(note);
+            }
+            const tools = document.getElementById('ai-tools');
+            if (tools) tools.classList.add('show');
+            const tt = document.getElementById('ai-tools-title');
+            if (tt) tt.textContent = r.title || 'Report';
+            box.ondblclick = () => openAIFullscreen();
+            box.title = 'Double-click to open full screen';
+        }
+
+        function openAIFullscreen() {
+            const r = window.__lastAI; if (!r) return;
+            document.getElementById('ai-fs-title').textContent = r.title || 'AI Report';
+            document.getElementById('ai-fs-sub').textContent = (r.model || '') + (r.time ? ' · ' + r.time : '');
+            const holder = document.getElementById('ai-fs-body');
+            holder.outerHTML = `<div id="ai-fs-body">${renderReportHTML(r.text)}</div>`;
+            document.getElementById('ai-fs-overlay').classList.add('open');
+            document.querySelector('.ai-fs-scroll').scrollTop = 0;
+        }
+
+        function closeAIFullscreen() {
+            document.getElementById('ai-fs-overlay').classList.remove('open');
+        }
+
+        document.addEventListener('keydown', e => {
+            if (e.key === 'Escape' && document.getElementById('ai-fs-overlay').classList.contains('open')) closeAIFullscreen();
+        });
+
+        function copyAIReport(btn) {
+            const r = window.__lastAI; if (!r) return;
+            const done = () => { if (btn) { const o = btn.textContent; btn.textContent = '✓ Copied'; setTimeout(() => btn.textContent = o, 1300); } };
+            if (navigator.clipboard?.writeText) navigator.clipboard.writeText(r.text).then(done, () => fallbackCopy(r.text, done));
+            else fallbackCopy(r.text, done);
+        }
+        function fallbackCopy(text, done) {
+            const ta = document.createElement('textarea'); ta.value = text; ta.style.position = 'fixed'; ta.style.opacity = '0';
+            document.body.appendChild(ta); ta.select();
+            try { document.execCommand('copy'); done(); } catch (e) {}
+            ta.remove();
+        }
+
+        function downloadAIReport(kind) {
+            const r = window.__lastAI; if (!r) return;
+            const stamp = new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-');
+            const base = 'js-recon-' + (r.title || 'report').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') + '-' + stamp;
+            let content, type, name;
+            if (kind === 'md') { content = r.text; type = 'text/markdown'; name = base + '.md'; }
+            else {
+                const css = document.getElementById('md-report-css')?.textContent || '';
+                content = `<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>${esc(r.title || 'JS Recon Report')}</title>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@600;900&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+<style>body{margin:0;background:#07060c;padding:32px 18px 60px}.wrap{max-width:1100px;margin:0 auto}
+.hdr{font-family:Orbitron,sans-serif;color:#ff2d4a;letter-spacing:3px;text-transform:uppercase;font-size:14px;margin-bottom:4px}
+.meta{color:#8b86a0;font:12px 'Share Tech Mono',monospace;margin-bottom:22px}.md-report{font-size:15px}
+${css}</style></head><body><div class="wrap"><div class="hdr">JS Recon · ${esc(r.title || 'AI Report')}</div>
+<div class="meta">${esc(r.model || '')} · ${esc(r.time || '')} · Created by D4RK TIG3R</div>${renderReportHTML(r.text)}</div></body></html>`;
+                type = 'text/html'; name = base + '.html';
+            }
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(new Blob([content], { type: type + ';charset=utf-8' }));
+            a.download = name; document.body.appendChild(a); a.click();
+            setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 500);
+        }
+
+        function explainAPIError(status, message) {
+            const msg = String(message || '');
+            const low = msg.toLowerCase();
+            let text = msg || 'Unknown API error';
+            let hint = '';
+            if (status === 401 || low.includes('no auth') || low.includes('invalid api key') || low.includes('user not found')) {
+                text = 'Invalid or missing API key.';
+                hint = 'Open Settings and paste a valid OpenRouter key (starts with sk-or-v1-).';
+            } else if (status === 402 || low.includes('credits') || low.includes('insufficient')) {
+                text = 'Not enough credits for this model.';
+                hint = 'Pick a FREE model, or add credits at <a href="https://openrouter.ai/credits" target="_blank" rel="noopener">openrouter.ai/credits</a>.';
+            } else if (low.includes('data policy') || low.includes('guardrail')) {
+                text = 'Blocked by your OpenRouter privacy settings.';
+                hint = 'Free models require allowing free endpoints in <a href="https://openrouter.ai/settings/privacy" target="_blank" rel="noopener">openrouter.ai/settings/privacy</a>.';
+            } else if (status === 404 || low.includes('no endpoints found') || low.includes('not a valid model')) {
+                text = 'This model is no longer available on OpenRouter.';
+                hint = 'Open Settings → ↻ Refresh, then choose another model (or use the Free Models Router).';
+            } else if (status === 429 || low.includes('rate limit') || low.includes('rate-limit')) {
+                text = 'Rate limited — free models are capped per minute/day.';
+                hint = 'Wait a bit, pick a different model, or keep auto-fallback enabled in Settings.';
+            } else if (status === 408 || status === 504 || low.includes('timeout') || low.includes('timed out')) {
+                text = 'The model timed out.';
+                hint = 'Try again or choose a faster model.';
+            }
+            return { text, hint };
+        }
+
+        async function callOpenRouter(prompt, title) {
+            const apiKey = getApiKey();
+            const model = localStorage.getItem('or-model') || DEFAULT_MODEL;
+            const useFallback = localStorage.getItem('or-fallback') !== '0';
+            const box = document.getElementById('ai-response');
+            box.className = 'ai-response-box loading';
+            box.ondblclick = null; box.title = '';
+            document.getElementById('ai-tools')?.classList.remove('show');
+            box.innerHTML = '<div class="ai-spinner"></div><span>Analyzing with AI…</span>';
+
+            const body = { messages: [{ role: 'user', content: prompt }], max_tokens: 2000 };
+            if (useFallback && model !== FREE_ROUTER) body.models = [model, FREE_ROUTER];
+            else body.model = model;
+
+            const ctrl = new AbortController();
+            const timer = setTimeout(() => ctrl.abort(), 90000);
+            try {
+                const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': 'Bearer ' + apiKey,
+                        'Content-Type': 'application/json',
+                        'HTTP-Referer': location.origin && location.origin !== 'null' ? location.origin : 'https://github.com/Tig3rsec',
+                        'X-Title': 'JS Recon'
+                    },
+                    body: JSON.stringify(body),
+                    signal: ctrl.signal
+                });
+                clearTimeout(timer);
+
+                let data = null;
+                try { data = await res.json(); } catch (e) { /* non-JSON body */ }
+                if (!res.ok || data?.error) {
+                    const e = data?.error || {};
+                    let m = e.message || ('HTTP ' + res.status);
+                    const raw = e.metadata?.raw;
+                    if (raw && typeof raw === 'string' && raw.length < 300) m += ' — ' + raw;
+                    const err = new Error(m); err.status = e.code || res.status; throw err;
+                }
+
+                const choice = data?.choices?.[0];
+                const msg = choice?.message || {};
+                let text = msg.content;
+                if (Array.isArray(text)) text = text.map(p => p.text || '').join('');
+                text = (text || '').trim();
+                // Reasoning models sometimes leave content empty and use the reasoning field
+                if (!text && msg.reasoning) text = String(msg.reasoning).trim();
+                if (!text) {
+                    text = choice?.finish_reason === 'length'
+                        ? 'The model ran out of tokens before answering (common with reasoning models). Try again or choose a non-reasoning model.'
+                        : 'The model returned an empty response. Try again or pick another model.';
+                }
+
+                const served = data.model || model;
+                window.__lastAI = {
+                    title: title || 'AI Analysis',
+                    text,
+                    model: (findModel(served)?.name || served),
+                    servedBy: (data.model && data.model !== model) ? data.model : '',
+                    time: new Date().toLocaleString()
+                };
+                showAIReport(window.__lastAI);
+            } catch (err) {
+                clearTimeout(timer);
+                const info = err.name === 'AbortError'
+                    ? { text: 'Request timed out after 90 seconds.', hint: 'Try again or choose a faster model.' }
+                    : explainAPIError(Number(err.status) || 0, err.message);
+                box.className = 'ai-response-box';
+                box.innerHTML = '';
+                const t = document.createElement('div');
+                t.textContent = '⚠ ' + info.text;
+                box.appendChild(t);
+                if (info.hint) {
+                    const h = document.createElement('div');
+                    h.className = 'ai-err-hint';
+                    h.innerHTML = info.hint;
+                    box.appendChild(h);
+                }
+                if (err.message && err.message !== info.text) {
+                    const d = document.createElement('div');
+                    d.className = 'ai-err-hint';
+                    d.textContent = 'Details: ' + err.message;
+                    box.appendChild(d);
+                }
+            }
+        }
+
+        function runAIPrompt(idx) {
+            const extracted = getExtractedText();
+            if (!extracted) return;
+            const p = AI_PROMPTS[idx];
+            callOpenRouter(p.prompt + extracted, p.title);
+        }
+
+        function runCustomPrompt() {
+            const input = document.getElementById('ai-custom-text');
+            const text = input?.value?.trim();
+            if (!text) return;
+            const extracted = getExtractedText();
+            const context = extracted ? '\n\nExtracted JS data for context:\n' + extracted : '';
+            callOpenRouter(text + context, 'Custom Query');
+        }
+
+    </script>
+
+    <canvas id="bg-canvas" style="position:fixed;inset:0;pointer-events:none;z-index:0;opacity:0.35;"></canvas>
+
+    <script async defer src="https://buttons.github.io/buttons.js"></script>
+    <script>
+        // Animated grid / particle background
+        (function() {
+            const canvas = document.getElementById('bg-canvas');
+            const ctx = canvas.getContext('2d');
+            let W, H;
+
+            function resize() {
+                W = canvas.width = window.innerWidth;
+                H = canvas.height = window.innerHeight;
+            }
+            resize();
+            window.addEventListener('resize', resize);
+
+            // Grid lines
+            function drawGrid(t) {
+                ctx.clearRect(0, 0, W, H);
+                const spacing = 60;
+                const pulse = Math.sin(t * 0.0008) * 0.5 + 0.5;
+
+                ctx.strokeStyle = `rgba(229,0,26,${0.04 + pulse * 0.04})`;
+                ctx.lineWidth = 0.5;
+
+                for (let x = 0; x < W; x += spacing) {
+                    ctx.beginPath();
+                    ctx.moveTo(x, 0);
+                    ctx.lineTo(x, H);
+                    ctx.stroke();
+                }
+                for (let y = 0; y < H; y += spacing) {
+                    ctx.beginPath();
+                    ctx.moveTo(0, y);
+                    ctx.lineTo(W, y);
+                    ctx.stroke();
+                }
+
+                // Sweeping horizontal scan line
+                const scanY = (t * 0.06) % H;
+                const grad = ctx.createLinearGradient(0, scanY - 40, 0, scanY + 40);
+                grad.addColorStop(0, 'rgba(229,0,26,0)');
+                grad.addColorStop(0.5, `rgba(229,0,26,${0.12 + pulse * 0.1})`);
+                grad.addColorStop(1, 'rgba(229,0,26,0)');
+                ctx.fillStyle = grad;
+                ctx.fillRect(0, scanY - 40, W, 80);
+            }
+
+            function loop(t) {
+                drawGrid(t);
+                requestAnimationFrame(loop);
+            }
+            requestAnimationFrame(loop);
+        })();
+    </script>
+</body>
+
+</html>
